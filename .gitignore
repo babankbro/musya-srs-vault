@@ -1,0 +1,7 @@
+# Obsidian workspace/config (ส่วนตัว ไม่ต้องขึ้น repo)
+.obsidian/
+.trash/
+
+# OS
+.DS_Store
+Thumbs.db

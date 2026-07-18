@@ -1,0 +1,171 @@
+---
+title: "Design — File Structure Tree (ผังโครงสร้างต้นไม้ของไฟล์ระบบ Frontend & Backend)"
+tags: [MUSYA, design, structure, files, tree]
+created: 2026-07-18
+---
+
+# 🌲 แผนผังโครงสร้างไฟล์และไดเรกทอรีของระบบ (File Structure Tree)
+
+← [[04 - Data Architecture & Schema]] · กลับสู่ภาพรวม → [[00 - Architecture Overview]]
+
+> นี่คือแผนผังที่ถูกสกัดภาพจำลองแบบย่อส่วนมาจากโครงสร้างไฟล์ของโปรเจกต์ของจริงในโฟลเดอร์ `new_version_musya/` 
+> (โดยทำการตัดทอนส่วนขยะ หรือโฟลเดอร์รกๆ ออก เช่น `node_modules`, `.next`, `__pycache__`, และแฟ้มเอกสาร `.md` ของ Vault จำนวนมหาศาล เพื่อให้กวาดสายตาจับใจความได้ง่าย)
+> หากคุณต้องการเจาะลึกการอธิบายเบื้องหลังการทำงานแต่ละส่วนโดยละเอียด ให้ติดตามอ่านได้ที่หน้า [[01 - Backend Design]] และ [[02 - Frontend Design]]
+
+---
+
+## 1. ⚙️ แดนหลังบ้าน Backend — โปรเจกต์ `chatapi.python` (FastAPI + CrewAI)
+
+```
+chatapi.python/
+├── main.py                     ← 🚀 จุดสตาร์ทจุดแรก: ใช้ปั้นแอป FastAPI ขึ้นมา, สั่งลงทะเบียนสายทาง 10 routers, ยึดพื้นที่เมาท์โฟลเดอร์ /static, และปล่อยหน้าทดสอบที่ /ui
+├── requirements.txt            ← 📦 รายการไลบรารี Python หลัก (มี fastapi, crewai, litellm, psycopg2, minio, redis และอื่นๆ)
+├── Dockerfile                  ← 🐳 สูตรผสมเตรียมสร้างอิมเมจ (อิงพื้นฐาน python:3.12-slim)
+├── docker-compose.yml          ← ไฟล์ compose สำหรับเปิดรันรันแบบฉายเดี่ยว Standalone (สำหรับฝั่ง Dev เอาไว้เทสเดี่ยวๆ)
+├── AGENTS.md                   ← 📄 แผ่นพับแคตตาล็อกแนะนำตัวละครเอเจนต์ทั้งหมด (ไฟล์เอกสาร)
+├── STRUCTURE.md                ← 📄 เอกสารชี้แจงโครงสร้างโปรเจกต์ (ไฟล์เอกสาร)
+├── AI_CSV_Data_Analyst_System.md ← 📄 เอกสารเผยดีไซน์เคล็ดลับ pipeline ที่ใช้วิเคราะห์ CSV ผ่าน 6 ด่านอรหันต์ (ไฟล์เอกสาร)
+├── check_obsidian.py           ← 🔧 สคริปต์คุณหมอช่วยวินิจฉัยตรวจสอบตารางระบบ Obsidian
+├── check_paths.py              ← 🔧 สคริปต์ตรวจความถูกต้องของเส้นทางไฟล์ path
+├── list_models.py              ← 🔧 สคริปต์สแกนตรวจสอบว่ามีโมเดล LLM ตัวไหนเปิดใช้งานได้บ้าง
+├── db_check_out.txt            ← ซากผลลัพธ์ dump จากคำสั่งตรวจสุขภาพฐานข้อมูล
+├── musya_*.dump                ← ไฟล์แฟ้มกู้วิกฤตสำรองฐานข้อมูล (ที่ได้จากการทำ pg_dump)
+├── data/                       ← โกดังพักเก็บข้อมูลดิบ
+├── database/                   ← 🗄️ กรุคำสั่ง SQL สำหรับปั้น Schema + เครื่องมือ migration ย้ายฐาน (เจาะลึกที่ [[04 - Data Architecture & Schema]])
+│   ├── schema.sql              ← ตัวสั่งเนรมิต star schema แดนอุบัติเหตุ + ตารางฝั่งแอป (accounts/sessions/reports)
+│   ├── accident.sql            ← ก้อนกระสอบข้อมูลสถิติอุบัติเหตุหนักๆ (ขนาดใหญ่โตมโหฬารร่วม ~74,000 บรรทัด)
+│   ├── 025_obsidian_knowledge.sql  ← ตัวเนรมิตตาราง vault + notes (พร้อมฝัง pg_trgm)
+│   ├── 026_obsidian_hybrid.sql     ← ตัวเนรมิต chunks ส่วนย่อย + เส้นทางใยแมงมุม wikilink graph
+│   ├── 027_obsidian_pdf_assets.sql ← ตัวใช้ผูกพันธะ โยงหน้า note ↔ ให้คู่กับไฟล์ PDF ใน MinIO
+│   ├── 028_md_to_db.sql        ← ตัวสูบ md เข้า db
+│   ├── 030_populate_mart_province_road.sql ← สูตรคำนวณเติมอัปเดตข้อมูลฝั่ง mart
+│   ├── obsidian_schema.sql     ← สคีมาเฉพาะกิจ
+│   └── migrate.py              ← 🔧 ตัวรันสคริปต์ migration สั่งอัปเดตสคีมา
+└── src/
+    ├── config.py               ← ⚙️ กล่องดวงใจ Settings (ผ่านอิง Pydantic) ที่สั่งคอยสูบค่าจากไฟล์แอบซ่อน .env + สั่งยึด cache แบบ lru_cache
+    ├── domains.py              ← นิยามกำหนดรายชื่อหน้าตาโดเมนทั้งหลาย เช่น d0–d4, dt, หรือแก๊ง obsidian
+    ├── history.py              ← สมุดจดประวัติแชทระยะสั้นบน Redis (จำได้ 6 ก้าว, มีเวลาสลายตัว 24 ชม.)
+    ├── db/
+    │   └── pool.py             ← 🚰 แหล่งน้ำบ่อจัดการท่อ PostgreSQL ThreadedConnectionPool (กติกาคือเปิดท่อล่อต่ำสุด 2 / ลิมิตทะลุห้ามเกิน 20 เส้น)
+    ├── routers/                🚪 10 กรุ๊ปสายทางพนักงานรับแขก Endpoint
+    │   ├── analyze.py          ← ★ ประตูใหญ่บานหลัก: ระบบ Memory→สับราง Router→เข้าสายพาน pipeline, บรอดแคสต์ SSE, พร้อมตู้ล็อก semaphore ≤ 5 งาน
+    │   ├── accident_chat.py    ← ระบบโต๊ะสนทนาเจาะลึกอุบัติเหตุ (ใช้หลักจับคู่ 2-agent ช่วยกัน) + มีทางด่วน /quick ให้
+    │   ├── accident_policy.py  ← ระบบวิเคราะห์เขียน Policy Brief รายเขตสุขภาพ 10 (เข้าเป้า /zone10)
+    │   ├── obsidian.py         ← ศูนย์อำนวยการค้น/ซักถาม/ปั้นดัชนี/อัปเดต sync ภายในถัง vault
+    │   ├── thaijo.py           ← ศูนย์ล้วงงานวิจัย ThaiJo → เอามามิกซ์สังเคราะห์ใหม่
+    │   ├── pubmed.py           ← ศูนย์ควานหาวรรณกรรมแพทย์สากล PubMed
+    │   ├── tools_router.py     ← โถงแจกจ่ายทางเดินเครื่องมือวิเคราะห์ เช่น /compare /report /workplan /database
+    │   ├── db_explorer.py      ← ประตูช่องเล็กสำหรับนักสำรวจ DB แบบแตะตาดูได้อย่างเดียว
+    │   ├── pdf_ingest.py       ← ประตูป้อนยัดกระดาษ PDF กินกลืนเป็นก้อนเล็กๆ chunk
+    │   └── error_log.py        ← ตู้เปิดดูประวัติ/ให้สรุปอาการแผลงๆ error log
+    ├── agents/                 ← 🤖 สมองกล AI กว่า ~23 ตัว (ถูกสร้างเป็นตี้ CrewAI crews) — แวะไปดูโฉมหน้าได้ที่ [[01 - Backend Design]]
+    │   ├── router.py           ← เด็กชี้เป้าจัดเส้นทางโดเมน
+    │   ├── question_resolver.py← หมอความจำ Memory Agent (ผู้ช่วยขยายประโยคต่อยอด follow-up ให้เป็นเรื่องราว)
+    │   ├── progress.py         ← โฆษกคอยประกาศส่ง progress event ถ่ายทอดผ่านสาย SSE
+    │   ├── agent_defaults.py   ← ศูนย์ตั้งค่า CrewAI + วิชาโกงความตาย 429 backoff (ใช้วิชา monkey-patch สอดแทรก)
+    │   ├── prompt_profile.py   ← แบบหล่อพิมพ์ prompt มาตรฐานแยกตามโดเมน
+    │   ├── csv_pipeline.py         ← สายพานกะเทาะ CSV แบบแผ่นเดียว (อาศัยพลัง 6 agents ช่วยกัน)
+    │   ├── multi_csv_pipeline.py   ← สายพานควานหา CSV ข้ามโดเมนมั่วโฟลเดอร์ (นักผจญภัย folder navigator)
+    │   ├── compare_agent.py / report_agent.py / database_agent.py / workplan_agent.py ← แก๊งตัวปั้นรายงาน
+    │   ├── accident_chat_orchestrator.py / accident_policy_agent.py / accident_policy_orchestrator.py / analyst_accident.py ← แก๊งสายตรวจอุบัติเหตุ
+    │   ├── thaijo_agent.py / thaijo_prompts.py / pubmed_agent.py ← แก๊งสายวิชาการ
+    │   ├── obsidian_fullcontext.py / obsidian_agent.py / obsidian_progress.py ← แก๊งขุนคลัง
+    │   ├── tavily_pipeline.py  ← แก๊งนักเซิร์ฟเน็ต
+    │   ├── error_monitor_agent.py ← ตำรวจเฝ้าระวังข้อผิดพลาด
+    │   └── text_utils.py       ← ตัวช่วยตัดคำเกลาข้อความ
+    ├── tools/                  ← 🔧 คลังอาวุธ 10 ชิ้น สำหรับ CrewAI ให้หยิบใช้ (คลาส @tool)
+    │   ├── accident_chat_sql.py← ดาบ SQL 15+ เล่ม กระซวกหาคำตอบแชทอุบัติเหตุ
+    │   ├── zone10_accident.py  ← ดาบ SQL 7 เล่ม เฉพาะกิจสำหรับพิมพ์ Policy Brief
+    │   ├── minio.py            ← ผู้ดูแลคลังไฟล์ + กระบะทรายรันงัด execute_python_code (subprocess)
+    │   ├── obsidian.py         ← ปรมาจารย์ค้น vault มี 2 กระบวนท่า (ตีแตกเป็น chunk+trgm / ท่าไม้ตายสุดท้ายงัด LIKE)
+    │   ├── vault_rag.py        ← เครื่องโหลดข้อมูล context vault แยกตามพิกัดจังหวัด
+    │   ├── tavily_search.py    ← กล้องส่องค้นเว็บ
+    │   ├── weather_tool.py     ← เสาอากาศดึงเป้า Open-Meteo
+    │   ├── thaijo_cache.py     ← กระปุกออมสินเก็บแคช PDF ค้างไว้บน Redis
+    │   ├── error_logger.py     ← สมุดปกดำจดแจ้ง log/จัดประเภท error
+    │   └── missing_data_logger.py ← สมุดปกแดงจดประจานพวกถามนอกเขต/หรือไม่มีข้อมูลจะให้
+    ├── schemas/                ← 📋 พิมพ์เขียว Pydantic models กำหนดโครงร่างข้อมูล (มีหมวด analyze, accident_chat, accident_policy, obsidian, thaijo, pubmed, tools)
+    ├── scripts/                ← 🔧 สคริปต์ช่วยก่อสร้างพื้นฐาน เช่น index_obsidian.py, sync_obsidian_pdfs.py
+    ├── static/                 ← พื้นที่แปะหน้าโชว์ 11 หน้า HTML สำหรับเทสเดโม (จับ mount ไว้เป็น /static) + และมีโฟลเดอร์ js/ ด้วย
+    └── obsidian_knowledge/     ← 🌿 บ้านเกิดเก็บ vault .md แบบของจริง (จัดแยกหมวด 5 จังหวัด + กระทรวง MOC) — แหล่งป้อน RAG source ชั้นยอด
+```
+
+---
+
+## 2. 🖥️ แดนหน้าบ้าน Frontend — โปรเจกต์ `chatappandpython` (ที่ตั้งชื่อแฝงว่า `musyav2`) พัฒนาบน Next.js 16 เป็นตัวส่งกะพริบหน้าจอ แถมรับจ๊อบเป็นตึกบัญชาการ BFF
+
+```
+chatappandpython/
+├── package.json                ← ทะเบียนบ้านชื่อแพ็กเกจ musyav2 + รายการช้อปปิ้ง dependencies (ใช้ next 16, react 19, หัวหอกอย่าง pg, minio, jose เป็นต้น)
+├── tsconfig.json / next.config.ts / next-env.d.ts ← เซตอัปหลักๆ ของภาษา Type/Next
+├── postcss.config.mjs / eslint.config.mjs ← เซตอัปช่วยเกลาโค้ดสวย
+├── proxy.ts                    ← คนคอยหันเสาอากาศ proxy
+├── Dockerfile                  ← 🐳 สูตรหุงต้ม build ซับซ้อน 3 เด้งชั้นๆ (deps ของพ่วง → builder ปั้นงาน → runner คนเสิร์ฟ)
+├── docker-compose.yml          ← ★ แม่งานใหญ่สาย compose เป็นตัวประสานอัญเชิญ 5 ค่ายบริการลงประทับรัน (frontend+python-ai+pg+minio+redis)
+├── docker-compose.hub.yml      ← แม่งานใหญ่สาย compose ฉบับเน้นดูดโหลดอิมเมจจากก้อน registry
+├── README.md / STRUCTURE.md    ← 📄 เล่มเอกสารทิศทาง
+├── database/                   ← ดินแดนยึดครองดาต้าฝั่งแอป
+│   ├── schema.sql              ← ตัวพิมพ์สร้างตารางแอปฝั่งตัวเอง (บัญชี accounts, รอบคุย chat_sessions, ชิ้นงาน journal_reports) + คำสั่งหยอดของ seed นำร่อง
+│   ├── init-musya.sql          ← สคริปต์จ่อจุดระเบิด init
+│   └── init-obsidian.sql       ← สคริปต์จ่อจุดระเบิดตารางตระกูล obsidian
+├── docker/                     ← แฟ้มช่วยงาน docker ทั้งหลาย
+├── public/                     ← แฟ้มรวมภาพ/ของสาธารณะ public + มีโฟลเดอร์ public/musyaend/js/ ช่วยงานแฝง
+├── lib/                        ← 📚 ขุมกำลังคลังแสงลับฝั่งเซิร์ฟเวอร์ (BFF helpers ล้วนๆ)
+│   ├── auth.ts                 ← หัวใจยามรักษาความปลอดภัย: บริหารการแฮช bcrypt(12) + จัดสรรตัวเลข JWT (ปั้นผ่าน jose, ตีตรา HS256, ให้บัตรอายุ 7 วัน)
+│   ├── internalFetch.ts        ← ★ หน้าด่านตรวจสิทธิ์: อิงตัว requireAuth() + แอบฝังสร้อย internalHeaders(ยัดกุญแจ x-internal-key)
+│   ├── db.ts                   ← ตัวสูบจัดการสายน้ำ PostgreSQL pool (ไลบรารี pg)
+│   ├── minio.ts                ← ท่อเชื่อมคุยกับโกดัง client MinIO
+│   ├── apa.ts                  ← สำนักพิมพ์จัดการสร้าง APA citation ให้
+│   ├── fileApaMetadata.ts      ← คนแงะแอบสกัด metadata รื้อหาข้างในไฟล์
+│   └── fileInsights.ts         ← เซียนตาเหยี่ยวหา AI insights แอบส่องเนื้อหาไฟล์
+└── app/                        ← หัวใจวงจร App Router (สร้างการเกิดหน้าเว็บ + API routes + แก๊ง components)
+    ├── layout.tsx / ClientLayout.tsx / page.tsx  ← จัดโครงกระดูกหน้า + หน้าแรกต้อนรับ
+    ├── login/ · register/ · forgot-password/     ← เขตต้อนรับคนภายนอก (public)
+    ├── account/                ← เขตดูแลหน้าตั้งค่าโปรไฟล์ส่วนตัว
+    ├── approved/               ← 🔐 ลานประหารอนุมัติคนผ่านเข้าแอป (ป้ายอาญาสิทธิ์ adminsuper เท่านั้น)
+    ├── chat/                   ← 💬 หน้าจอห้องบัญชาการแชทหลัก
+    │   ├── page.tsx · LeftPane.tsx · RightPane.tsx ← แบ่งฉากจอ ซ้าย ขวา
+    │   ├── *Store.ts           ← สมุดคุมบัญชีสถานะ event stores ไม่พึ่ง redux: มีร้าน chatSession, ร้าน streaming, ฝากของ attachedFiles, จดโน้ต chatDraft, ส่องกบ thaijo, มุดฐาน databaseExplorer
+    │   ├── chatTypes.ts        ← โมเดลบอกทรงข้อมูล
+    │   ├── sessions/[sessionId]/page.tsx  ← เปิดรื้ออ่านเซสชันแชทที่ถูกบันทึกเจาะจง
+    │   └── journal-template/   ← แก๊งช่วยปั้นรายงาน (มี buildJournalHtml, journalDocxStyles, journalHtmlStyles เสกหน้า export เป็น DOCX/PDF)
+    ├── journal/                ← ห้องเก็บหิ้งคลังรายงานผลงานที่เซฟไว้
+    ├── fileapa/                ← ห้องดูแลจัดการขยะไฟล์ + จับทำบรรณานุกรม APA (+ แอบมีห้องย่อย [fileRoute]/, กับ listapa/)
+    ├── pdf-upload/             ← สายพานลำเลียงอัปโหลด PDF อัดยัดเข้าห้องสมุด
+    ├── musyaend/               ← 🚗 ฉากจอลับ Accident Chat กางจอเล่นแบบเต็มตา (+ แทรกทางเข้า db-explorer/, obsidian/)
+    ├── actions/upload.ts       ← คำสั่งรับจ้างโยนไฟล์ (server action) อัปโหลดพุ่งตรง
+    ├── component/              ← องค์ประกอบจิ๊กซอว์ร่วม (components)
+    │   ├── Sidebar.tsx · DatabaseExplorer.tsx
+    │   └── chat/               ← จิ๊กซอว์ฝั่งแชท: ตัวแผง ChatInput.tsx (ให้สิทธิ์จิ้มเลือกวิชา tool), จอฉาย MarkdownContent.tsx, และป้ายกระพริบไฟ AgentPipelinePanel.tsx
+    └── api/                    ← 🔌 เขตชุมสายด่านตรวจคนเข้าเมือง BFF Route Handlers (เตือน: ทุกท่อนต้องโชว์บัตร JWT ผ่านมือตม. requireAuth เสมอ)
+        ├── auth/               ← ระบบออกบัตร: login, logout, register, me, users, forgot-password, reset-password
+        ├── chat/               ← ★ ทางแยกสำคัญ route.ts (ตัวชิ่ง proxy ไหลตามโหมด + แยกร่างสตรีม SSE tee/เซฟหนีตาย fallback) + ทะลวงหน้า history/
+        ├── files/              ← ย้ายข้าวของ: โยน upload, จัดแจง [fileId] (+แอบล้วง ai-metadata, insights), ฟังก์ชันควบรวม merge/{search,analyze,execute,save}
+        ├── generate-apa/       ← เสกคำอ้างอิง APA
+        ├── journal-reports/    ← รื้อหิ้งคลังรายงาน (+มีห้องเจาะจง [id]/)
+        ├── obsidian/[...path]/ ← รูหนู passthrough → มุดทะลุกำแพงไปโผล่ฝั่ง backend /api/obsidian
+        ├── pdf/                ← การจัดการม้วนสาร: ควบรวม files, ทำ ingest (+เช็ค status), ส่ง upload, ลาน view, คลัง vault/*, เปิดส่อง obsidian-view
+        ├── python/[prefix]/[...path]/  ← รูหนู passthrough เฝ้าระวังเข้มงวด ปล่อยผ่านเฉพาะ: แก๊ง accident-chat|accident-policy|db|obsidian
+        └── thaijo-topics/      ← ควานหาหิ้งหัวข้อใหม่
+```
+
+> [!note] กฎเหล็กเรื่องการตรวจสอบสิทธิ์บนพื้นที่นี้ (สำคัญมาก)
+> ทราบหรือไม่ว่าในโครงสร้างเวอร์ชันนี้ **โดนถอดไฟล์ทหารยามหน้าประตู `middleware.ts` ทิ้งไปแล้ว** — ระบบหันมาใช้วิธีป้องกันแบบประชิดตัวในแต่ละเส้นทางผ่านคำสั่ง **`requireAuth()`** แทน
+> (ซึ่งซ่อนตัวคอยซุ่มอยู่ในแฟ้ม `lib/internalFetch.ts`) โดยตัวมันจะถูกจับไปเรียกเช็คสถานะอยู่บรรทัดแรกในทุกๆ หน้าของ Route Handler หากพบตัวว่าไม่มี/หรือตั๋ว JWT ไม่ผ่านเกณฑ์ปุ๊ป มันจะเตะหน้าหงายคืนค่า 401 ในเสี้ยววิ ส่วนทางออกตอนจะหันไปเรียกข้ามฟากไปหาลูกพี่หลังบ้าน backend ทุกครั้ง มันก็จะถูกบังคับให้กลืนฝังจี้ตามติดตัว `x-internal-key` ไหลผ่านเส้นทาง `internalHeaders()` เป็นของแถมเสมอ
+
+---
+
+## 3. 🗺️ ลายแทงนำทาง "มองหาฟีเจอร์ไหน → ให้ไปส่องไฟล์อะไร" (Feature → File map)
+
+| ความสามารถ (ฟีเจอร์) | เดินหาในไฟล์ฝั่งหน้าบ้าน (Frontend) | เดินหาในไฟล์ฝั่งหลังบ้าน (Backend) |
+|---|---|---|
+| การล็อกอิน/ลงทะเบียนสมัคร | ล้วงกุญแจที่ `app/api/auth/*`, ตรวจโค้ดที่ `lib/auth.ts` | — (ฝั่งหลังบ้านไม่ต้องสน เพราะทาง BFF ผูกขาดถือตาราง `accounts` เองเบ็ดเสร็จ) |
+| ห้องแชทตีฝีปากถาม-ตอบ | คุมกระแสที่ `app/api/chat/route.ts`, ฉากที่ `app/chat/*`, ตัวคุมกรอกที่ `component/chat/ChatInput.tsx` | รุมวิเคราะห์ที่ `routers/analyze.py` → แจกงานแก๊ง `agents/*` |
+| งัดแงะสถิติอุบัติเหตุ | (เลือกโหมดส่งผ่านแชท mode `stats`) | ตัวบงการ `agents/accident_chat_orchestrator.py`, ตัวขุดตาราง `tools/accident_chat_sql.py` |
+| งมเข็มคลังความรู้องค์กร | ส่องฉากที่ `app/musyaend/obsidian/`, ด่านส่งตรวจ `app/api/obsidian/` | ตัวเปิดทาง `routers/obsidian.py`, ยอดฝีมือรื้อคลัง `agents/obsidian_fullcontext.py` |
+| ขุดรากงานวิจัย ThaiJo/PubMed | (เลือกโหมดส่งผ่านแชท mode `research`) | สายดึงไทย `agents/thaijo_agent.py`, สายดึงนอก `agents/pubmed_agent.py` |
+| เสกปั้นสร้าง/บันทึกรายงาน | บล็อกหล่อที่ `app/chat/journal-template/*`, หิ้งโชว์ที่ `app/api/journal-reports/` | ด่านจัดหนัก `routers/analyze.py` (ทะลวงไปในโหมด report-gather) |
+| การจัดระเบียบไฟล์ & ปั้น APA | ตู้กระจก `app/fileapa/*`, ตัวเสก `lib/apa.ts`, และ `lib/minio.ts` | — (เพราะเก็บของไว้ในเซิร์ฟโดดๆ MinIO) |
+| ยืนดูตาปริบๆ สำรวจตาราง DB | ลานสอดแนม `app/musyaend/db-explorer/`, สายส่งภาพ `app/api/db/` | คนชี้เป้าโชว์ `routers/db_explorer.py` |
+
+*แผนผังนี้ทำการถอดโครงสร้างและตรวจเช็คยืนยันกับโค้ดโฟลเดอร์ของจริง ณ วันที่ 2026-07-18 — โปรดทราบว่าโปรเจกต์อาจมีการแตกลูกขยายหลานไฟล์เติบโตขึ้นได้ในอนาคต แนะนำให้ตรวจสอบพาดพิงกับโฟลเดอร์โค้ด Repository จริงอยู่เสมอ*
