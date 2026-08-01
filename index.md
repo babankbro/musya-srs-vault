@@ -93,6 +93,7 @@ created: 2026-07-18
 - [[01 - SSE Event Protocol]] — 🆕 สัญญาการสตรีม SSE (ทุก event type + payload + ลำดับต่อ pipeline)
 - [[02 - Prompt Strategy & Anti-Hallucination]] — 🆕 กลยุทธ์พรอมต์ร่วม + กลไกกันข้อมูลมั่ว + ช่องว่าง determinism
 - [[03 - Traceability Matrix]] — 🆕 ตารางสอบย้อนกลับ FR↔UC↔Design↔Agent↔Test + สรุปช่องว่าง
+- [[04 - Backlog E1–E18 — ตรวจกับโค้ดจริง]] — 🆕 สถานะ Epic E1–E18 เทียบโค้ดจริง + งานเพิ่มเติม A1–A5 พร้อมลำดับลงมือ
 
 ---
 
