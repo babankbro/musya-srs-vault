@@ -45,6 +45,11 @@ chatapi.python/
 │   ├── 027_obsidian_pdf_assets.sql ← ตัวใช้ผูกพันธะ โยงหน้า note ↔ ให้คู่กับไฟล์ PDF ใน MinIO
 │   ├── 028_md_to_db.sql        ← ตัวสูบ md เข้า db
 │   ├── 030_populate_mart_province_road.sql ← สูตรคำนวณเติมอัปเดตข้อมูลฝั่ง mart
+│   ├── 031_llm_settings.sql    ← 🆕 ตารางเก็บค่าย LLM ที่ผู้ดูแลตั้งได้ (key/model/enabled + updated_by)
+│   ├── 032_csv_data_dict.sql   ← 🆕 พจนานุกรมข้อมูลของแต่ละ CSV (ความหมายคอลัมน์ · ขอบเขต · ข้อควรระวัง)
+│   ├── 033_hdc_import.sql      ← 🆕 ทะเบียนของที่นำเข้าจาก HDC (ตาราง · ปีที่ใช้ได้ · เวลาซิงก์ · date_com)
+│   ├── 034_data_dict_definition.sql ← 🆕 เพิ่มช่องนิยาม/ตัวตั้ง/ตัวหารจากหน้ารายงาน HDC
+│   ├── 035_kpi_target.sql      ← 🆕 เพิ่มช่องค่าเป้าหมายตัวชี้วัด
 │   ├── obsidian_schema.sql     ← สคีมาเฉพาะกิจ
 │   └── migrate.py              ← 🔧 ตัวรันสคริปต์ migration สั่งอัปเดตสคีมา
 └── src/
@@ -53,7 +58,7 @@ chatapi.python/
     ├── history.py              ← สมุดจดประวัติแชทระยะสั้นบน Redis (จำได้ 6 ก้าว, มีเวลาสลายตัว 24 ชม.)
     ├── db/
     │   └── pool.py             ← 🚰 แหล่งน้ำบ่อจัดการท่อ PostgreSQL ThreadedConnectionPool (กติกาคือเปิดท่อล่อต่ำสุด 2 / ลิมิตทะลุห้ามเกิน 20 เส้น)
-    ├── routers/                🚪 10 กรุ๊ปสายทางพนักงานรับแขก Endpoint
+    ├── routers/                🚪 13 กรุ๊ปสายทางพนักงานรับแขก Endpoint (ตรวจกับ `main.py` 1 ส.ค. 2569)
     │   ├── analyze.py          ← ★ ประตูใหญ่บานหลัก: ระบบ Memory→สับราง Router→เข้าสายพาน pipeline, บรอดแคสต์ SSE, พร้อมตู้ล็อก semaphore ≤ 5 งาน
     │   ├── accident_chat.py    ← ระบบโต๊ะสนทนาเจาะลึกอุบัติเหตุ (ใช้หลักจับคู่ 2-agent ช่วยกัน) + มีทางด่วน /quick ให้
     │   ├── accident_policy.py  ← ระบบวิเคราะห์เขียน Policy Brief รายเขตสุขภาพ 10 (เข้าเป้า /zone10)
@@ -63,7 +68,10 @@ chatapi.python/
     │   ├── tools_router.py     ← โถงแจกจ่ายทางเดินเครื่องมือวิเคราะห์ เช่น /compare /report /workplan /database
     │   ├── db_explorer.py      ← ประตูช่องเล็กสำหรับนักสำรวจ DB แบบแตะตาดูได้อย่างเดียว
     │   ├── pdf_ingest.py       ← ประตูป้อนยัดกระดาษ PDF กินกลืนเป็นก้อนเล็กๆ chunk
-    │   └── error_log.py        ← ตู้เปิดดูประวัติ/ให้สรุปอาการแผลงๆ error log
+    │   ├── error_log.py        ← ตู้เปิดดูประวัติ/ให้สรุปอาการแผลงๆ error log
+    │   ├── llm_config.py       ← 🆕 ห้องควบคุมค่าย AI (เฉพาะ `adminsuper` · มีปุ่มยิงทดสอบจริง)
+    │   ├── hdc_import.py       ← 🆕 ด่านศุลกากรนำเข้าข้อมูล HDC (preview → import → refresh · 409 กันข้อมูลหาย)
+    │   └── data_dict.py        ← 🆕 ป้ายอธิบายความหมายข้างตู้ข้อมูล (404 = ไฟล์นี้ไม่มีพจนานุกรม ไม่ใช่ error)
     ├── agents/                 ← 🤖 สมองกล AI กว่า ~23 ตัว (ถูกสร้างเป็นตี้ CrewAI crews) — แวะไปดูโฉมหน้าได้ที่ [[01 - Backend Design]]
     │   ├── router.py           ← เด็กชี้เป้าจัดเส้นทางโดเมน
     │   ├── question_resolver.py← หมอความจำ Memory Agent (ผู้ช่วยขยายประโยคต่อยอด follow-up ให้เป็นเรื่องราว)
@@ -78,8 +86,10 @@ chatapi.python/
     │   ├── obsidian_fullcontext.py / obsidian_agent.py / obsidian_progress.py ← แก๊งขุนคลัง
     │   ├── tavily_pipeline.py  ← แก๊งนักเซิร์ฟเน็ต
     │   ├── error_monitor_agent.py ← ตำรวจเฝ้าระวังข้อผิดพลาด
+    │   ├── llm_provider.py     ← 🆕 นายทะเบียนกลางค่าย LLM (gemini/chatgpt/claude) · ลำดับ DB > env > ค่าตั้งต้น
+    │   │                         + แปล error เป็นภาษาคนได้ 5 แบบ (`friendly_llm_error()`)
     │   └── text_utils.py       ← ตัวช่วยตัดคำเกลาข้อความ
-    ├── tools/                  ← 🔧 คลังอาวุธ 10 ชิ้น สำหรับ CrewAI ให้หยิบใช้ (คลาส @tool)
+    ├── tools/                  ← 🔧 คลังอาวุธ 15 ชิ้น สำหรับ CrewAI ให้หยิบใช้ (คลาส @tool)
     │   ├── accident_chat_sql.py← ดาบ SQL 15+ เล่ม กระซวกหาคำตอบแชทอุบัติเหตุ
     │   ├── zone10_accident.py  ← ดาบ SQL 7 เล่ม เฉพาะกิจสำหรับพิมพ์ Policy Brief
     │   ├── minio.py            ← ผู้ดูแลคลังไฟล์ + กระบะทรายรันงัด execute_python_code (subprocess)
@@ -89,9 +99,24 @@ chatapi.python/
     │   ├── weather_tool.py     ← เสาอากาศดึงเป้า Open-Meteo
     │   ├── thaijo_cache.py     ← กระปุกออมสินเก็บแคช PDF ค้างไว้บน Redis
     │   ├── error_logger.py     ← สมุดปกดำจดแจ้ง log/จัดประเภท error
-    │   └── missing_data_logger.py ← สมุดปกแดงจดประจานพวกถามนอกเขต/หรือไม่มีข้อมูลจะให้
+    │   ├── missing_data_logger.py ← สมุดปกแดงจดประจานพวกถามนอกเขต/หรือไม่มีข้อมูลจะให้
+    │   ├── hdc_opendata.py     ← 🆕 ทูตเจรจากับคลังกลางกระทรวง — ลองซ้ำเมื่อโดน Cloudflare 403,
+    │   │                         กรองเขต 10, ล้าง HTML แบบไม่กินเกณฑ์ตัวเลข (`< 100 mg%`)
+    │   ├── data_dict.py        ← 🆕 ช่างปั้นพจนานุกรมข้อมูลจากเนื้อไฟล์จริง **ไม่ใช้ LLM** (อ่านซ้ำได้ผลเดิม)
+    │   ├── data_dict_lookup.py ← 🆕 คนหยิบพจนานุกรมไปแปะท้าย prompt (`describe_for_prompt()`)
+    │   ├── amphoe_zone10.py    ← 🆕 ทะเบียนอำเภอเขต 10 ใช้ตรวจว่าข้อมูลที่ดึงมาอยู่ในเขตจริง
+    │   └── vault_placement.py  ← 🆕 คนชี้ว่าไฟล์ใหม่ควรลงโฟลเดอร์ไหนใน vault
     ├── schemas/                ← 📋 พิมพ์เขียว Pydantic models กำหนดโครงร่างข้อมูล (มีหมวด analyze, accident_chat, accident_policy, obsidian, thaijo, pubmed, tools)
-    ├── scripts/                ← 🔧 สคริปต์ช่วยก่อสร้างพื้นฐาน เช่น index_obsidian.py, sync_obsidian_pdfs.py
+    ├── scripts/                ← 🔧 สคริปต์งานมือ 9 ตัว — รันเองเมื่อจำเป็น ไม่ได้อยู่ในเส้นทางปกติ
+    │   ├── index_obsidian.py   ← สร้างดัชนี vault ใหม่ (ต้องรันหลังคัดลอกโน้ตมาเครื่องใหม่)
+    │   ├── sync_obsidian_pdfs.py ← จับคู่โน้ตกับไฟล์ PDF ใน MinIO
+    │   ├── build_data_dict.py  ← 🆕 ปั้นพจนานุกรมให้ไฟล์ที่ยังไม่มี
+    │   ├── backfill_definitions.py ← 🆕 ย้อนเติมนิยามจาก HDC ให้ไฟล์ที่นำเข้าไปก่อน `_save_dict` จะถูกแก้
+    │   ├── backfill_caveats.py ← 🆕 ย้อนเติมข้อควรระวัง
+    │   ├── bulk_import_hdc.py  ← 🆕 นำเข้าทั้งหมวดรวดเดียว
+    │   ├── match_hdc_tables.py ← 🆕 จับคู่ชื่อตารางกับรหัสรายงาน (ต้นทางไม่มี endpoint ค้นด้วยชื่อตาราง)
+    │   ├── audit_hdc_subcatalog.py ← 🆕 ตรวจว่าดึงครบทั้งหมวดหรือตกหล่น
+    │   └── repair_empty_notes.py ← 🆕 ซ่อมโน้ตที่ ingest แล้วได้เนื้อว่าง
     ├── static/                 ← พื้นที่แปะหน้าโชว์ 11 หน้า HTML สำหรับเทสเดโม (จับ mount ไว้เป็น /static) + และมีโฟลเดอร์ js/ ด้วย
     └── obsidian_knowledge/     ← 🌿 บ้านเกิดเก็บ vault .md แบบของจริง (จัดแยกหมวด 5 จังหวัด + กระทรวง MOC) — แหล่งป้อน RAG source ชั้นยอด
 ```
@@ -138,13 +163,19 @@ chatappandpython/
     │   ├── reportRetry.ts           ← 🆕 ปุ่มลองใหม่รายแหล่ง — ยิง report-gather-retry แล้ว append + เซฟทับลง DB
     │   ├── wizardPersist.ts         ← 🆕 เซฟความคืบหน้า wizard แบบ debounce กันหายตอน reload กลางทาง
     │   ├── reportSavePersist.ts     ← 🆕 เซฟ id+title ของรายงานที่ auto-save แล้ว ให้ปุ่มเปิดรายงานในแชทเก่ายังกดได้
+    │   ├── autoToolStore.ts         ← 🆕 ปุ่ม "อัตโนมัติ" — ให้ระบบเลือกเครื่องมือเองแทนที่ผู้ใช้ต้องเดา
     │   ├── obsidianApa.ts           ← 🆕 แปลง ObsidianNoteRef → บรรณานุกรม APA (แกะประเภท/ปี/ชื่อเรื่องจากชื่อไฟล์)
     │   ├── chatTypes.ts        ← โมเดลบอกทรงข้อมูล (🆕 เพิ่มชนิด WizardProgressSaved, SavedReportRef + ฟิลด์ wizardProgress, savedReports)
     │   ├── sessions/[sessionId]/page.tsx  ← เปิดรื้ออ่านเซสชันแชทที่ถูกบันทึกเจาะจง
     │   └── journal-template/   ← แก๊งช่วยปั้นรายงาน (มี buildJournalHtml, journalDocxStyles, journalHtmlStyles เสกหน้า export เป็น DOCX/PDF)
     ├── journal/                ← ห้องเก็บหิ้งคลังรายงานผลงานที่เซฟไว้
     ├── fileapa/                ← ห้องดูแลจัดการขยะไฟล์ + จับทำบรรณานุกรม APA (+ แอบมีห้องย่อย [fileRoute]/, กับ listapa/)
-    ├── pdf-upload/             ← สายพานลำเลียงอัปโหลด PDF อัดยัดเข้าห้องสมุด
+    │   ├── FileMetadata.tsx    ← 🆕 แผงพจนานุกรมข้างตัวอย่างไฟล์ — เรียงข้อควรระวังขึ้นก่อน
+    │   │                         เพราะเป็นสิ่งที่ทำให้ตอบผิดได้ แล้วค่อยขอบเขต → ความหมายคอลัมน์
+    │   └── HdcImportModal.tsx  ← 🆕 กล่องนำเข้า/รีเฟรชจาก HDC (จับ 409 มาแสดงเป็นตัวเลือกให้คนตัดสินใจ)
+    ├── hdc-import/             ← 🆕 หน้าดึงทั้งหมวดรวดเดียว + ลองใหม่เฉพาะลิงก์ที่ล้ม (ต้นทางเด้ง 403 เป็นช่วง ๆ)
+    ├── admin/ai-settings/      ← 🆕 หน้าตั้งค่าค่าย AI — เฉพาะสิทธิ์ `adminsuper` เท่านั้น
+    ├── pdf-upload/             ← สายพานลำเลียงอัปโหลด PDF อัดยัดเข้าห้องสมุด (🆕 เลือกหลายไฟล์ · ยกเลิกได้ · Ingest Log ละเอียด)
     ├── musyaend/               ← 🚗 ฉากจอลับ Accident Chat กางจอเล่นแบบเต็มตา (+ แทรกทางเข้า db-explorer/, obsidian/)
     ├── actions/upload.ts       ← คำสั่งรับจ้างโยนไฟล์ (server action) อัปโหลดพุ่งตรง
     ├── component/              ← องค์ประกอบจิ๊กซอว์ร่วม (components)
@@ -161,8 +192,13 @@ chatappandpython/
         ├── obsidian/[...path]/ ← รูหนู passthrough → มุดทะลุกำแพงไปโผล่ฝั่ง backend /api/obsidian
         ├── pdf/                ← การจัดการม้วนสาร: ควบรวม files, ทำ ingest (+เช็ค status), ส่ง upload, ลาน view, คลัง vault/*, เปิดส่อง obsidian-view
         ├── python/[prefix]/[...path]/  ← รูหนู passthrough เฝ้าระวังเข้มงวด ปล่อยผ่านเฉพาะ: แก๊ง accident-chat|accident-policy|db|obsidian
+        ├── llm/                ← 🆕 เลือกค่าย AI: providers/ (ผู้ใช้ทั่วไป) + admin/providers/{,test} (เฉพาะ adminsuper)
+        ├── hdc/                ← 🆕 นำเข้าจากคลังกลาง: preview · subcatalog · import · refresh/[fileId] · imports
+        ├── datadict/[fileId]/  ← 🆕 พจนานุกรมข้อมูลให้หน้า fileapa แสดง (404 = ไฟล์นี้ไม่มี ไม่ใช่ error)
         └── thaijo-topics/      ← ควานหาหิ้งหัวข้อใหม่
 ```
+
+รวม **51 BFF route** · **17 หน้าเว็บ** (นับจริง 1 ส.ค. 2569)
 
 > [!note] กฎเหล็กเรื่องการตรวจสอบสิทธิ์บนพื้นที่นี้ (สำคัญมาก)
 > ทราบหรือไม่ว่าในโครงสร้างเวอร์ชันนี้ **โดนถอดไฟล์ทหารยามหน้าประตู `middleware.ts` ทิ้งไปแล้ว** — ระบบหันมาใช้วิธีป้องกันแบบประชิดตัวในแต่ละเส้นทางผ่านคำสั่ง **`requireAuth()`** แทน
