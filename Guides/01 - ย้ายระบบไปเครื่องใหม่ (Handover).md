@@ -92,7 +92,11 @@ git -C chatappandpython check-ignore -v .env.local
 | **กุญแจและรหัสผ่าน** | `.env` · `.env.local` | — | ❌ **ห้ามขึ้น git** |
 | เอกสารระบบ (vault นี้) | `musya-srs-vault/` | 1.4 MB | ✅ |
 
-**ปริมาณ ณ วันเขียน:** 1,545 โน้ต · 165 CSV · 162 PDF · 135 รายการที่ดึงจาก HDC
+**ปริมาณ ณ 1 ส.ค. 2569:** 1,545 โน้ต · 213 ไฟล์ใน MinIO · 162 PDF · 183 รายการที่ดึงจาก HDC
+
+สำรองจริงครั้งล่าสุด **1 ส.ค. 2569** ไว้ที่ `D:\work\musya\backup-20260801\`
+(dump 28 MB · `data-minio/` 2.5 GB · `obsidian_knowledge/` 4.1 MB) — ทุกคำสั่งใน
+คู่มือนี้รันจริงในรอบนั้นและตรวจผลแล้ว ตัวเลขที่กำกับว่า "ตรวจจริง" มาจากรอบนี้
 
 > [!danger] MinIO เป็น bind mount ไม่ใช่ named volume — ต่างจาก Postgres
 > `docker-compose.yml` ผูก `../data-minio/data:/data` ⇒ ไฟล์อยู่บนดิสก์โฮสต์ตรง ๆ
@@ -107,18 +111,45 @@ git -C chatappandpython check-ignore -v .env.local
 
 ### 1.1 Dump ฐานข้อมูล
 
+ไม่ต้องหยุด stack — `pg_dump` อ่านภาพ ณ ขณะเริ่มคำสั่ง (MVCC) ได้ข้อมูลที่สอดคล้องกัน
+แม้มีคนใช้ระบบอยู่
+
 ```bash
+export MSYS_NO_PATHCONV=1          # Git Bash เท่านั้น — ดูกล่องเตือนข้างล่าง
+
+docker exec chatapp-postgres rm -f /tmp/musyadata.dump      # กันไฟล์เก่าค้าง
 docker exec chatapp-postgres pg_dump -U postgres -d musyadata -Fc -f /tmp/musyadata.dump
+docker exec chatapp-postgres ls -l /tmp/musyadata.dump      # ต้องเห็นขนาด ~28 MB
 docker cp chatapp-postgres:/tmp/musyadata.dump ./_handover/musyadata.dump
+docker exec chatapp-postgres rm -f /tmp/musyadata.dump
 ```
 
-**ตรวจว่าใช้ได้จริงก่อนเชื่อ** — ดูขนาดไฟล์อย่างเดียวไม่พอ:
+> [!danger] บน Git Bash ถ้าลืม `MSYS_NO_PATHCONV=1` จะได้ dump เก่ามาโดยไม่รู้ตัว
+> Git Bash แปลง `/tmp/musyadata.dump` เป็น `C:/Users/.../Temp/musyadata.dump`
+> ⇒ `pg_dump` เขียนไม่ได้และฟ้อง error — **แต่ `docker cp` บรรทัดถัดไปทำงานสำเร็จ**
+> เพราะไปหยิบไฟล์เก่าที่ค้างอยู่ใน container จากการ dump ครั้งก่อน
+>
+> ผลคือได้ไฟล์ขนาดดูสมเหตุสมผล วันที่ดูใหม่ แต่ข้อมูลเก่า — เจอมาแล้วตอนสำรอง
+> 1 ส.ค. 2569 รอดเพราะบังเอิญเห็นบรรทัด error เท่านั้น
+>
+> สองบรรทัด `rm -f` และ `ls -l` ข้างบนมีไว้กันเรื่องนี้โดยเฉพาะ **อย่าตัดออก**
+
+**ตรวจว่าใช้ได้จริงก่อนเชื่อ** — ดูขนาดไฟล์อย่างเดียวไม่พอ ต้องให้ `pg_restore`
+อ่านสารบัญให้ผ่าน (ไฟล์เสียจะอ่านไม่ออกตั้งแต่ขั้นนี้):
 
 ```bash
-docker exec chatapp-postgres pg_restore -l /tmp/musyadata.dump | grep -c "TABLE DATA"
+docker cp ./_handover/musyadata.dump chatapp-postgres:/tmp/verify.dump
+docker exec chatapp-postgres pg_restore -l /tmp/verify.dump | grep -c "TABLE DATA"
+docker exec chatapp-postgres rm -f /tmp/verify.dump
 ```
 
-ต้องได้ **34 ตาราง** (ค่า ณ วันเขียน) · ไฟล์ประมาณ **28 MB**
+ต้องได้ **34 ตาราง** · ไฟล์ประมาณ **28 MB** (ตรวจจริง 1 ส.ค. 2569)
+
+ตรวจซ้ำว่าตารางที่ขาดไม่ได้อยู่ครบ — `pg_restore -l` ต้องมีทั้ง 6 ชื่อนี้:
+
+```
+accounts · obsidian_notes · csv_data_dict · hdc_import · llm_settings · chat_sessions
+```
 
 > ใช้ `-Fc` (custom format) ไม่ใช่ SQL ล้วน เพราะ restore เลือกได้ว่าจะเอาตารางไหน
 > และบีบอัดให้ในตัว — 148 MB เหลือ 28 MB
@@ -134,9 +165,25 @@ robocopy data-minio  \\เครื่องใหม่\musya\data-minio  /E /Z
 
 โครงสร้างข้างในต้องเป็น:
 ```
-data-minio/data/fileapa/       165 ไฟล์ CSV + __meta__/ + __pathdata__/
-data-minio/data/pdf-library/   162 ไฟล์ PDF
+data-minio/data/fileapa/       215 รายการ (CSV + __meta__/ + __pathdata__/)
+data-minio/data/pdf-library/   162 รายการ PDF
 ```
+
+> [!note] **1 object = 1 โฟลเดอร์ ไม่ใช่ 1 ไฟล์** — อย่าเอาสองตัวเลขนี้มาเทียบกัน
+> MinIO เก็บแต่ละ object เป็นโฟลเดอร์ที่มี `xl.meta` กับไฟล์ข้อมูลอยู่ข้างใน
+> นับด้วย `ls` ได้ **215 / 162** แต่นับด้วย `find -type f` ได้ **348 / 427**
+> — ทั้งคู่ถูก แค่นับคนละหน่วย
+>
+> ตอนตรวจว่าคัดลอกครบ ให้เทียบ**ตัวเลขเดียวกัน**ระหว่างต้นทางกับปลายทาง
+> จะใช้หน่วยไหนก็ได้ ขอแค่ใช้คำสั่งเดียวกันทั้งสองฝั่ง
+
+ตรวจว่าคัดลอกครบ (robocopy คืนค่า 0–7 = สำเร็จ · **1 = คัดลอกแล้ว ไม่ใช่ error**):
+
+```bash
+find data-minio -type f | wc -l          # ทำทั้งต้นทางและปลายทาง ต้องได้เท่ากัน
+```
+
+ตรวจจริง 1 ส.ค. 2569 ได้ **1,040 ไฟล์ · 2.5 GB** ทั้งสองฝั่ง
 
 ### 1.3 คัดลอกไฟล์ตั้งค่า
 
@@ -242,7 +289,10 @@ docker exec chatapp-postgres psql -U postgres -d musyadata -Atc "
   SELECT 'hdc='||count(*) FROM hdc_import;"
 ```
 
-ต้องได้ `notes=1545` · `csv_dict=180` · `hdc=135` (ตัวเลข ณ วันเขียน)
+ต้องได้ `notes=1545` · `csv_dict=228` · `hdc=183` · `accounts=53` (ตรวจจริง 1 ส.ค. 2569)
+
+> ตัวเลขนี้โตขึ้นเรื่อย ๆ ตามการนำเข้า HDC — ประเด็นคือ**ต้องเท่ากับเครื่องเดิม**
+> ไม่ใช่เท่ากับตัวเลขในเอกสาร นับที่เครื่องเดิมไว้ก่อน dump แล้วเอามาเทียบ
 
 ### 3.3 ไม่ต้องรัน migration ถ้า restore จาก dump
 
@@ -274,7 +324,11 @@ from src.tools.minio import _load_path_index
 print('ไฟล์ที่มองเห็น:', len(_load_path_index(force=True)))"
 ```
 
-ต้องได้ **165** — ถ้าได้ 0 แปลว่า `data-minio` วางผิดที่ (ดูข้อ 2.2)
+ต้องได้ **213** (ตรวจจริง 1 ส.ค. 2569) — น้อยกว่าจำนวนรายการใน `ls` อยู่ 2
+เพราะ `__meta__/` กับ `__pathdata__/` ไม่ใช่ไฟล์ของผู้ใช้ จึงไม่ถูกนับ
+
+**ได้ 0 = `data-minio` วางผิดชั้น** (ดูข้อ 2.2) — เป็นอาการที่หลอกที่สุดในคู่มือนี้
+เพราะระบบขึ้นครบทุก container ไม่มี error สักบรรทัด แต่ไม่มีไฟล์ให้ค้นเลย
 
 ---
 
