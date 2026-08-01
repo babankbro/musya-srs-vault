@@ -54,6 +54,8 @@ created: 2026-07-18
 - [[05 - File Structure Tree]] — ผังโครงสร้างไฟล์ของ Frontend และ Backend + แผนที่ฟีเจอร์→ไฟล์
 - [[06 - API Reference — Backend]] — 🆕 รายละเอียด API ฝั่ง Backend รายไฟล์ (10 routers, method/request/response)
 - [[07 - API Reference — Frontend (BFF)]] — รายละเอียด API ฝั่ง BFF รายไฟล์ (route handlers + proxy)
+- [[08 - HDC Open Data Sync (เขต 10)]] — 🆕 ดึงสถิติจาก MoPH Open Data + HDC เข้าคลังอัตโนมัติ (API 2 ระบบ, นิยามตัวชี้วัด, กับดักข้อมูล)
+- [[09 - HDC Sync — สถานะงาน]] — 🆕 สถานะล่าสุด: เสร็จอะไร กำลังทำอะไร เหลืออะไร (อัปเดต 2026-08-01)
 
 ## 🔧 เวิร์กโฟลว์ทีละขั้น (Workflow — Frontend → Backend → Database)
 
@@ -82,6 +84,7 @@ created: 2026-07-18
 
 เอกสารเชิงปฏิบัติ — วิธีติดตั้งและเริ่มใช้งานจริง:
 - [[00 - Setup & Onboarding Guide]] — 🆕 ติดตั้งด้วย Docker, ตั้ง `.env` 2 ฝั่ง, seed DB, index vault, troubleshooting
+- [[01 - ย้ายระบบไปเครื่องใหม่ (Handover)]] — ยกระบบพร้อมข้อมูลไปเครื่องใหม่ (dump DB · MinIO · git 3 repo)
 
 ## 📚 เอกสารอ้างอิง (Reference)
 

@@ -41,11 +41,16 @@ created: 2026-07-18
 | `crew_plan` | บอกแผนการรบของ crew (มักเกิดในบาง pipeline ที่ต้องวางแผนก่อน) | รายละเอียดแผน (plan details) |
 | `text_stream_start` | สัญญาณปี่กลอง เริ่มเทสตรีมเนื้อหายาวๆ (ไปโชว์ที่จอฝั่งขวา RightPane) | `articleCount` (จำนวนบทความอ้างอิง) |
 | `text_chunk` | สะเก็ดชิ้นข้อความที่ทยอยยิงมาทีละคำ (Typewriter effect) | `text` (ก้อนอักษรเล็กๆ) |
+| `obsidian_stream_start` | 🆕 สัญญาณว่า Gemini เริ่มเขียนคำตอบคลังความรู้แล้ว — ยิงก่อน `obsidian_chunk` ชุดแรกเสมอ | `step` (= `obsidian_search`) |
+| `obsidian_chunk` | 🆕 สะเก็ดคำตอบสด ๆ ของสาย Obsidian ทีละ token (ลด perceived latency ของคำถามที่กิน ~50-60 วิ) | `step`, `text` |
+| `report_source_status` | 🆕 สถานะรายแหล่งข้อมูล (badge 5 อัน) ในโหมดสร้างรายงาน — ยิงซ้ำหลายรอบต่อแหล่งตามสถานะที่เปลี่ยน | `source`, `label`, `status` (`pending`\|`running`\|`done`\|`error`), `message?` (เฉพาะตอน error) |
 | `result` | สัญญาณคายคำตอบสุดท้ายจบงาน (ใช้เฉพาะโหมดแชทจบในตัว เช่น obsidian/accident) | `content` (เนื้อหา), `domain`, (อาจมี `notesReferenced?`, `followUps?`) |
-| `final` | สัญญาณอลังการ ผลลัพธ์สุดท้าย (ใช้เฉพาะโหมดงานช้าง research/report) | `message`, `textResult` (เนื้อหายาว), `articlesText` (ซากอ้างอิง), `articleCount`, `reportTitle`, `agentSteps` |
+| `final` | สัญญาณอลังการ ผลลัพธ์สุดท้าย (ใช้เฉพาะโหมดงานช้าง research/report) | `message`, `textResult` (เนื้อหายาว), `articlesText` (ซากอ้างอิง), `articleCount`, `reportTitle`, `agentSteps`, 🆕 `docType`, 🆕 `retrySource` |
 | `error` | สัญญาณล่มปากอ่าว เกิดข้อผิดพลาดร้ายแรงขึ้นแล้ว | `message` (ข้อความฟ้อง) |
 
 > **คู่มือถอดรหัส `step`:** โค้ดขั้นตอน เช่น `memory` (เกลาความจำ), `router` (คนสับราง), `accident_sql` (วิ่งหา SQL อุบัติเหตุ), `schema` (ดูโครงสร้าง CSV), `code_gen` (เขียนโค้ด), `insight` (คนนั่งเทียนวิเคราะห์), `vault_rag` (ล้วงคลังความรู้), `obsidian_search` (คนหากระดาษโน้ต), `search`, `fetcher`, `planner`, `generator`
+
+> **คู่มือถอดรหัส `source` (ของ `report_source_status`):** มี 5 ค่าตายตัวเท่านั้น — `obsidian` (คลังความรู้), `stats` (สถิติ), `thaijo` (งานวิจัยไทย), `pubmed` (งานวิจัยสากล), `tavily` (ค้นหาเว็บ) ส่วน `label` คือชื่อไทยสำเร็จรูปที่ backend ส่งมาให้แปะบน badge ได้เลย ไม่ต้อง map เอง
 
 ---
 
@@ -83,9 +88,62 @@ created: 2026-07-18
   "articlesText": "วัตถุดิบอ้างอิงแบบแยกทีละแหล่ง (ซ่อนเก็บไว้ให้ report generator ดึงไปใช้)",
   "articleCount": 8, 
   "reportTitle": "รายงานทบทวนวรรณกรรมอุบัติเหตุปี 2567", 
-  "agentSteps": [ /* ประวัติการรันเอเจนต์ทั้งหมด */ ] 
+  "agentSteps": [ /* ประวัติการรันเอเจนต์ทั้งหมด */ ],
+  "docType": "policy",
+  "retrySource": null
 }
 ```
+
+> [!note] เจาะ 2 ฟิลด์ใหม่ท้าย `final`
+> - **`docType`** — echo ชนิดเอกสารที่ผู้ใช้เลือกไว้ตั้งแต่ตอนกดปุ่ม "สร้างรายงาน" (`policy` / `plan` / `workplan`) กลับมาให้หน้าจอ เพื่อให้ wizard **ข้ามขั้นตอนถามซ้ำว่าจะทำเอกสารประเภทไหน** แล้วกระโดดไปขั้นสร้างหัวข้อได้ทันที (ค่าว่างถ้าไม่ได้เลือกมาก่อน)
+> - **`retrySource`** — ถ้าไม่ใช่ `null` แปลว่าก้อนนี้มาจากปุ่ม "ลองใหม่" ของแหล่งเดียว หน้าจอต้อง **ต่อท้าย (append) section ใหม่เข้ากับเนื้อหาเดิม** ไม่ใช่ทับทั้งก้อน มิฉะนั้นผลของอีก 4 แหล่งที่สำเร็จไปแล้วจะหายวับ
+
+### 🟣 `final` (โหมด `d0` — AI ทั่วไป · 🆕 2026-07-30)
+
+```json
+{
+  "type": "final",
+  "message": "การควบคุมโรคพยาธิใบไม้ตับทำได้หลายทาง...",
+  "domain": { "code": "d0", "nameTh": "ทั่วไป", "nameEn": "General" },
+  "chatProvider": { "key": "gemini", "nameTh": "Gemini" },
+  "suggestedTools": [
+    {
+      "tool": "obsidian",
+      "labelTh": "ค้นคลังความรู้ (338 เอกสาร)",
+      "hintTh": "ตอบใหม่โดยอ้างอิงเอกสารของเขตสุขภาพที่ 10 พร้อมบรรณานุกรม"
+    }
+  ],
+  "agentSteps": [ /* router / reasoning / insight */ ]
+}
+```
+
+> [!note] เจาะ 2 ฟิลด์ใหม่ของสาย `d0`
+> - **`chatProvider`** — บอกว่าคำตอบก้อนนี้มาจากค่ายไหนจริง ๆ (`gemini` / `chatgpt` / `claude`)
+>   จำเป็นเพราะผู้ใช้เลือกค่ายได้เอง ถ้าไม่ echo กลับมาก็ไม่มีทางรู้ว่าใครตอบ —
+>   ชื่อค่ายยังถูกใส่ใน `agentSteps[].agentName` ด้วย (`Insight Analyst (Gemini)`)
+> - **`suggestedTools`** — เครื่องมือที่ระบบเสนอให้ **ถามซ้ำอัตโนมัติ** หน้าจอวาดเป็นปุ่ม ⚡
+>   กดแล้วเลือกเครื่องมือ + ใส่คำถามเดิม + ส่งเองครบในคลิกเดียว
+>   **ส่งมาเฉพาะเมื่อมีของจริงให้ดึง** — backend นับเอกสารในคลังก่อนเสมอ ได้ 0 = ไม่ส่งฟิลด์นี้
+>   (ปุ่มที่กดแล้วได้ "ไม่พบข้อมูล" แย่กว่าไม่มีปุ่ม)
+>   · ค่า `tool` ที่เป็นไปได้ตอนนี้: `obsidian` (คลังความรู้) · `stats` (ข้อมูลสถิติ)
+
+### 🟡 `obsidian_stream_start` / `obsidian_chunk` (🆕 สาย Obsidian สตรีมสด)
+```json
+{ "type": "obsidian_stream_start", "step": "obsidian_search" }
+{ "type": "obsidian_chunk", "step": "obsidian_search", "text": "จากรายงานประจำปี 2566 พบว่า" }
+```
+
+> [!warning] มี "เบรกมือ" ซ่อนอยู่ในสตรีมนี้
+> ระหว่างสตรีม ระบบเฝ้าดู **หาง** ของบัฟเฟอร์ (400 ตัวอักษรท้ายสุด) ตลอดเวลา ถ้าจับได้ว่ามีเนื้อหาดิบของเอกสารต้นฉบับหลุดออกมา (บรรทัด `FILE:`, บล็อก YAML frontmatter, wikilink `[[...]]`) จะ **หยุดยิง `obsidian_chunk` ทันทีกลางคัน** แล้วปล่อยให้ตัว guard/retry ระดับบนจัดการเขียนคำตอบใหม่ — ดังนั้นฝั่งหน้าจอ **ห้ามเอาผลรวมของ `obsidian_chunk` ไปใช้เป็นคำตอบสุดท้ายเด็ดขาด** ต้องรอ `result` เสมอ เพราะสตรีมอาจถูกตัดจบกลางประโยคโดยตั้งใจ (ดู [[02 - Prompt Strategy & Anti-Hallucination]])
+
+### 🟠 `report_source_status` (🆕 ป้ายสถานะ 5 แหล่งในโหมดสร้างรายงาน)
+```json
+{ "type": "report_source_status", "source": "obsidian", "label": "คลังความรู้ (Obsidian)", "status": "pending" }
+{ "type": "report_source_status", "source": "obsidian", "label": "คลังความรู้ (Obsidian)", "status": "running" }
+{ "type": "report_source_status", "source": "thaijo", "label": "งานวิจัยไทย (ThaiJo)", "status": "error", "message": "429 quota exceeded" }
+```
+
+> ลำดับที่การันตี: ทุกแหล่งจะได้ `pending` **ครบทั้งชุดก่อน** แล้วจึงทยอยเป็น `running` ทีละตัว (ห่างกัน ~1.5 วิ กัน 429) และปิดท้ายด้วย `done` หรือ `error` ตัวใดตัวหนึ่งเสมอ — แหล่งที่ `error` จะมีปุ่ม "ลองใหม่" ขึ้นบน badge ให้กดยิง `report-gather-retry` เฉพาะแหล่งนั้น
 
 ### 🔴 `error` (กรณีระบบแครช หรือคนแน่นเซิร์ฟเวอร์เต็ม)
 ```json
@@ -103,8 +161,10 @@ created: 2026-07-18
 |---|---|---|
 | `agent_start` / `agent_done` | ร้านค้า `streamingStore` | แถบซ้าย (LeftPane) จะมีแท็บกล่อง AgentPipelinePanel เด้งขึ้นมา โชว์หลอดสเตตัสการวิ่งงานทีละสเต็ป |
 | `text_stream_start` / `text_chunk` | ร้านค้า `thaijoStore` / หรือบัฟเฟอร์ของ RightPane | แถบขวา (RightPane) จะโชว์ตัวหนังสือค่อยๆ วิ่งพิมพ์แบบ Typewriter / HTML สดๆ |
+| 🆕 `obsidian_stream_start` / `obsidian_chunk` | บัฟเฟอร์สตรีมของ LeftPane | ข้อความคำตอบคลังความรู้ค่อยๆ ไหลขึ้นในฟองแชทระหว่างรอ (แต่ยัง **ไม่ใช่** คำตอบจริง — ตัวจริงมากับ `result`) |
+| 🆕 `report_source_status` | ร้านค้า `reportSourceStore` | แถบ badge 5 อัน (`ReportSourceBadges.tsx`) โชว์สถานะรายแหล่งแบบเรียลไทม์ + ปุ่ม "ลองใหม่" บนตัวที่ `error` |
 | `result` | ร้านค้า `chatSessionStore` | แสดงข้อความคำตอบของแชท + โผล่ป้ายอ้างอิง (notesReferenced) + โผล่ปุ่มเสนอคำถาม (followUps) |
-| `final` | `chatSessionStore` + อัปเดต RightPane | จอซ้ายโชว์ข้อความสั้น + จอขวาโชว์เนื้อหาเต็ม + อาจแถมปุ่มเด้งเปิดหน้าต่าง Report Wizard |
+| `final` | `chatSessionStore` + อัปเดต RightPane | จอซ้ายโชว์ข้อความสั้น + จอขวาโชว์เนื้อหาเต็ม + อาจแถมปุ่มเด้งเปิดหน้าต่าง Report Wizard (ถ้ามี `docType` ติดมาก็ข้ามขั้นเลือกประเภทเอกสารไปเลย) |
 | `error` | ร้านค้า `chatSessionStore` | แปะป้ายตัวแดงแสดงข้อความ error ประจานกลางจอแชท |
 
 ---
@@ -113,11 +173,12 @@ created: 2026-07-18
 
 | ท่อการทำงาน (Pipeline) | ลำดับการไหลของ Event เรียงจากซ้ายไปขวา (ทั่วไป) |
 |---|---|
-| สาย Normal (หลุดเข้า Obsidian) | `agent_start:memory` → `agent_done:memory` → `agent_start:router` → `agent_done:router` → `agent_start:obsidian_search` → `agent_done` → จบที่ `result` |
+| สาย Normal (หลุดเข้า Obsidian) | `agent_start:memory` → `agent_done:memory` → `agent_start:router` → `agent_done:router` → `agent_start:obsidian_search` → 🆕 `obsidian_stream_start` → 🆕 `obsidian_chunk` รัวๆ → `agent_done` → จบที่ `result` |
 | สาย Stats (หลุดเข้า อุบัติเหตุ SQL) | `agent_start:router` → `agent_done:router` → `agent_start:accident_sql` → `agent_done` → จบที่ `result` |
 | สาย Stats (หลุดเข้าแก๊งทุบ CSV) | `router` → `file_finder` → `schema` → `code_gen` → `executor` → `insight` (ทุกตัวมี start/done ประกบหัวท้าย) → จบที่ `result` |
 | สายวิจัย Research | `text_stream_start` → (`agent_start/done` ของทีม ThaiJo + PubMed) → พ่น `text_chunk` รัวๆ → จบที่ `final` |
-| สายสร้างรายงาน (Report-gather) | `text_stream_start` → (`agent_start/done` ระดมพลจาก 5 แหล่ง) → พ่น `text_chunk` รัวๆ → จบที่ `final` |
+| สายสร้างรายงาน (Report-gather) | `text_stream_start` → 🆕 `report_source_status:pending` ครบทั้ง 5 แหล่ง → 🆕 `report_source_status:running` ทยอยทีละตัว → (`agent_start/done` ระดมพลจาก 5 แหล่ง) + พ่น `text_chunk` รัวๆ → 🆕 `report_source_status:done`/`error` รายตัว → จบที่ `final` (มี `docType`) |
+| 🆕 สายลองใหม่รายแหล่ง (Report-gather-retry) | เหมือนสายบนเป๊ะ **แต่มีแหล่งเดียว** — `text_stream_start` → `report_source_status:pending`/`running` ของแหล่งที่ขอ → `agent_start/done` + `text_chunk` → `done`/`error` → จบที่ `final` (มี `retrySource` = ชื่อแหล่งนั้น ให้หน้าจอ append ไม่ใช่ทับ) |
 
 ---
 

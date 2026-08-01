@@ -13,6 +13,10 @@ created: 2026-07-18
 
 ---
 
+> [!tip] จะ **ย้ายระบบพร้อมข้อมูลเดิม** ไปเครื่องใหม่ใช่ไหม
+> เล่มนี้สอนติดตั้ง**ระบบเปล่า** — ถ้าต้องการยกข้อมูลเดิมไปด้วย (ฐานข้อมูล 148 MB · ไฟล์ 2.5 GB · โน้ต 1,545 ใบ)
+> ให้ไปที่ [[01 - ย้ายระบบไปเครื่องใหม่ (Handover)]] แทน
+
 ## 0. เตรียมเสบียงก่อนออกรบ (Prerequisites)
 
 | สิ่งที่ต้องมี | คำอธิบาย/ข้อควรระวัง |
@@ -30,7 +34,10 @@ created: 2026-07-18
 ระบบเราเป็นระบบคู่ขนาน จึงต้องใช้ **2 ไฟล์ `.env`** — แบ่งกันอ่านคนละฝั่ง ห้ามสับสนเด็ดขาด:
 
 ### ก. ฝั่งปัญญาประดิษฐ์: `chatapi.python/.env` (ให้ Python-AI อ่าน)
-กลุ่มตัวแปรที่ต้องใส่: กุญแจ AI (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `TAVILY_API_KEY`), ชื่อโมเดล (`GEMINI_MODEL=gemini-2.5-flash-lite`, `GEMINI_MODEL_PRO`), ช่องทางต่อ PostgreSQL (`DB_*`), Redis (`REDIS_URL`), MinIO (`MINIO_*`, `MINIO_BUCKET=fileapa`), Obsidian (`OBSIDIAN_VAULT_PATH`, `OBSIDIAN_DEFAULT_VAULT=health_region_10`), CORS, และ `INTERNAL_API_KEY`
+กลุ่มตัวแปรที่ต้องใส่: กุญแจ AI (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `TAVILY_API_KEY`), ชื่อโมเดล (`GEMINI_MODEL=gemini-2.5-flash-lite`, `GEMINI_MODEL_PRO`), ช่องทางต่อ PostgreSQL (`DB_*`), Redis (`REDIS_URL`), MinIO (`MINIO_*`, `MINIO_BUCKET=fileapa`), Obsidian (`OBSIDIAN_VAULT_PATH`, `OBSIDIAN_DEFAULT_VAULT=health_region_10`), CORS, `INTERNAL_API_KEY` และ 🆕 **`PUBLIC_APP_URL`**
+
+> [!tip] 🆕 `PUBLIC_APP_URL` — ตัวแปรใหม่ที่มักถูกลืม (ค่าเริ่มต้น `http://localhost:3000`)
+> **ต้องตั้งให้ตรงกับ `NEXT_PUBLIC_APP_URL` ฝั่งหน้าบ้านเสมอ** ใช้แปลง path สัมพัทธ์ (เช่น `/api/pdf/view/123`) ให้เป็น URL เต็มก่อนฝังลงข้อความที่ป้อนให้ LLM อ่าน — เพราะ LLM ไม่ยอมทำ path สัมพัทธ์ให้เป็นลิงก์คลิกได้ในเอกสาร HTML ที่มันเขียนเอง (ต่างจากฝั่ง React ที่ `<a href>` แบบสัมพัทธ์ทำงานได้ปกติ) **ถ้าตั้งผิด ลิงก์เอกสารคลังความรู้ในรายงานที่ generate ออกมาจะพาไปหน้าที่ไม่มีอยู่จริง**
 > สามารถไปลอกการบ้านได้จากไฟล์ `.env.example` · หมายเหตุกาดอกจัน: ค่าตัวแปรหลายตัวจะถูก **สวมทับ (override) โดย Docker compose** ตอนสั่งรัน (เช่น มันจะแอบเปลี่ยนให้ไปเรียก `DB_HOST=postgres`, `MINIO_ENDPOINT=minio`, `REDIS_URL=redis://redis:6379/0` เองอัตโนมัติ)
 
 ### ข. ฝั่งหน้าบ้าน: `chatappandpython/.env.local` (ให้ Frontend/BFF อ่าน)
@@ -120,6 +127,26 @@ npm run dev   # เปิดเว็บ http://localhost:3000
 ```
 > คำเตือน: ท่านี้คุณจะต้องมีเซิร์ฟเวอร์ PostgreSQL / MinIO / Redis ติดตั้งและเปิดรันรออยู่ในคอมพิวเตอร์ของคุณเองอยู่ก่อนแล้วนะ (หรือใช้วิธีลักไก่ สั่ง compose ให้เปิดแค่ 3 ตัวนี้ขึ้นมาก็ได้)
 
+> [!warning] เวอร์ชัน Python สำคัญมาก
+> `Dockerfile` ตรึงไว้ที่ **python:3.12-slim** — ถ้าเครื่องคุณเป็น Python เวอร์ชันใหม่กว่านั้นมาก (เช่น 3.14) แพ็กเกจอย่าง `crewai` / `litellm` / `psycopg2-binary` จะติดตั้งไม่ผ่าน ให้ใช้ท่า Docker แทน หรือสร้าง venv ด้วย Python 3.12 โดยเฉพาะ
+
+---
+
+## 6.5 🆕 รันชุดทดสอบ (pytest 43 เทสต์)
+
+> [!important] เทสต์ **ไม่ได้อยู่ใน Docker image**
+> `Dockerfile` คัดลอกเข้าไปแค่ `main.py` กับ `src/` เท่านั้น ดังนั้น `docker compose exec chatapp-python-ai pytest` จะขึ้นว่า **"no tests ran"** เสมอ — ไม่ใช่ว่าเทสต์พัง แต่มันไม่มีอยู่ในคอนเทนเนอร์ตั้งแต่แรก
+
+วิธีที่ใช้ได้จริงคือ mount โฟลเดอร์รีโพเข้าไปในคอนเทนเนอร์ชั่วคราว (ใช้อิมเมจที่ build ไว้แล้วเพื่อไม่ต้องลง dependency ซ้ำ):
+
+```bash
+docker run --rm -v "<path เต็มของ chatapi.python>:/work" -w //work --env-file .env -e DB_HOST=postgres --network chatappandpython_default chatappandpython-python-ai python -m pytest -q
+```
+
+ผลที่ควรได้: `43 passed`
+
+> เกร็ด: `-w //work` ที่มี slash 2 ตัวเป็นท่าเฉพาะของ Git Bash บน Windows (กันไม่ให้ MSYS แปลง path ให้อัตโนมัติ) ถ้าใช้ PowerShell หรือ Linux ใส่ `-w /work` ตามปกติได้เลย
+
 ---
 
 ## 7. คลินิกแก้กรรม (Troubleshooting ปัญหาที่พบบ่อย)
@@ -134,12 +161,19 @@ npm run dev   # เปิดเว็บ http://localhost:3000
 | LLM โวยวายพ่น error 429 ออกมา | ยิงถล่มจนโควต้าทะลุ (rate limit) — แต่ไม่ต้องกังวล ระบบเรามีกลไก backoff ถ่วงเวลาให้แล้ว แค่นั่งรอเดี๋ยวมันก็รันผ่านเอง ([[05 - Non-Functional Requirements|NFR-REL-01]]) |
 | ตัว BFF หน้าบ้าน ทะลวงคุยกับ AI หลังบ้านไม่ผ่าน (ติด 401/403) | กุญแจ `INTERNAL_API_KEY` 2 ฝั่งดันพิมพ์ไม่เหมือนกัน ไปแก้ซะ |
 | พิมพ์ถามข้อมูลของจังหวัดนอกเขต 10 → แล้ว AI บอกไม่มีข้อมูล | ปกติครับ นี่คือผลงานของยามหน้าประตู (out-of-zone guard) ที่ตั้งใจเขียนไว้กีดกัน ([[03 - Functional Requirements|FR-CHAT-08]]) |
+| 🆕 สั่ง `pytest` ในคอนเทนเนอร์แล้วขึ้น "no tests ran" | ไม่ใช่เทสต์พัง — `Dockerfile` ไม่ได้ COPY โฟลเดอร์ `tests/` เข้าไปใน image ต้อง mount รีโพเข้าไปตอนรันแทน (ดูส่วนที่ 6.5) |
+| 🆕 ลิงก์เอกสารคลังความรู้ในรายงานที่ generate ออกมา กดแล้วพาไปหน้าที่ไม่มีจริง | ตั้ง `PUBLIC_APP_URL` (ฝั่ง AI) ไม่ตรงกับ `NEXT_PUBLIC_APP_URL` (ฝั่งเว็บ) — ไปแก้ให้ตรงกันซะ (ดูส่วนที่ 1.ก) |
+| 🆕 กดปุ่มคลังความรู้แล้วมีข้อความแปลก ๆ อย่าง `## FILE: ...` หรือ `[[...]]` โผล่ในคำตอบ | ตามสเปคต้องไม่เกิดขึ้นเลย (มีด่านกัน 3 ชั้น) — ถ้าเจอจริงคือ **บั๊ก** ให้ดู log ที่ขึ้นว่า `[fullctx] เนื้อหาดิบยังหลุดหลัง retry` แล้วแจ้งทีมพัฒนา ([[02 - Prompt Strategy & Anti-Hallucination]] ส่วนที่ 3.1) |
+| 🆕 ระดมข้อมูลทำรายงานแล้วมีแหล่งนึงพัง | ไม่ต้องเริ่มใหม่ทั้งชุด — กดปุ่ม **"ลองใหม่"** บน badge สีแดงของแหล่งนั้นได้เลย ระบบจะรันเฉพาะแหล่งเดียวแล้วต่อท้ายเนื้อหาเดิมให้ |
 
 ---
 
 ## 8. เช็กลิสต์ก่อนออกบิน (Quick checklist)
 - [ ] สตาร์ท Docker engine ติดไฟเขียวแล้ว
 - [ ] สร้างไฟล์ `.env` (ฝั่ง AI) + `.env.local` (ฝั่งเว็บ) ครบถ้วน, ตรวจสอบ `INTERNAL_API_KEY` ว่าตรงกันแบบฝาแฝด
+- [ ] 🆕 ตรวจ `PUBLIC_APP_URL` (ฝั่ง AI) ว่าตรงกับ `NEXT_PUBLIC_APP_URL` (ฝั่งเว็บ)
+- [ ] 🆕 แตกไฟล์ `chatapi.python/src/obsidian_knowledge.7z` ลงเป็นโฟลเดอร์ `src/obsidian_knowledge/` แล้ว (compose bind-mount path นี้ — ถ้าไม่แตกไว้ คอนเทนเนอร์จะเห็นคลังความรู้ว่างเปล่า)
+- [ ] 🆕 รัน `pytest` ผ่านครบ 43 เทสต์ (ดูส่วนที่ 6.5)
 - [ ] สั่ง `docker compose up -d --build` รันผ่านฉลุย → ทั้ง 5 container ยืนยิ้ม healthy
 - [ ] ลองเปิด http://localhost:8000/docs แล้วเห็นหน้า Swagger (สถานะ 200) · ลองเปิด http://localhost:3000 หน้าเว็บขึ้น (สถานะ 200)
 - [ ] รันคำสั่ง index ตู้หนังสือ Obsidian vault เรียบร้อยแล้ว (เช็คแล้ว `note_count > 0`)

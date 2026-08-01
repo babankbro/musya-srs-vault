@@ -43,7 +43,16 @@ created: 2026-07-18
 - โหมด `thaijo` → สับไปเข้าท่อ `/api/thaijo`
 - โหมด `thaijo-report` → สับไปเข้าท่อ `/api/thaijo/report`
 - แก๊งเครื่องมือ `compare` / `report` / `database` / `pubmed` → สับพุ่งตรงไปเข้าท่อ `/api/{mode}`
-- ส่วนพวกหมวดจับฉ่ายอื่นๆ (`normal` / `stats` / `obsidian` / `multi` / `tavily` / `research` / `report-gather`) → จะถูกจับมัดรวมวิ่งไปเข้าประตูใหญ่ `/api/analyze`
+- ส่วนพวกหมวดจับฉ่ายอื่นๆ (`normal` / `stats` / `obsidian` / `multi` / `tavily` / `research` / `report-gather` / 🆕 `report-gather-retry`) → จะถูกจับมัดรวมวิ่งไปเข้าประตูใหญ่ `/api/analyze`
+
+**🆕 3 ฟิลด์ที่ BFF ส่งผ่าน (pass-through) ไปให้ backend เพิ่ม** — ตัว `chat/route.ts` ไม่ได้แปลงค่าอะไร แค่หยิบจาก body แล้วยัดต่อไปตรง ๆ:
+
+| ฟิลด์ | ใช้กับโหมด | ความหมายย่อ |
+|---|---|---|
+| `doc_type` | `report-gather` | ชนิดเอกสารที่เลือกไว้ล่วงหน้า → backend echo กลับเป็น `docType` ใน `final` ให้ wizard ข้ามขั้นเลือกประเภท |
+| `retry_source` | `report-gather-retry` | ชื่อแหล่งเดียวที่จะรันซ้ำ (`obsidian`/`stats`/`thaijo`/`pubmed`/`tavily`) |
+| `report_title` | `report-gather` | ชื่อเรื่องสั้น ๆ ที่ผู้ใช้พิมพ์จริง แยกจาก `prompt` ที่อาจถูกเสริมหัวข้อจนยาว |
+
 **คำเตือนความอดทน:** ตัวอัปสตรีมตั้งค่ารอไว้สูงสุด **10 นาที** (เผื่อ AI คิดช้า) · อ้างอิงยูสเคส: [[02 - Chat & Domain Analysis]], [[03 - Report Generation]]
 
 ---
@@ -72,7 +81,10 @@ created: 2026-07-18
 | ชื่อไฟล์ | วิธีเรียก (Method) | หน้าที่ความรับผิดชอบ |
 |---|---|---|
 | `journal-reports/route.ts` | GET / POST | ขอดูกระดานรายชื่อรายงานของตนเอง / นำส่งรายงานเล่มใหม่เข้าไปเก็บบนหิ้ง (ลงตาราง `journal_reports`) |
-| `journal-reports/[id]/route.ts` | GET / DELETE | เปิดอ่านรูปเล่มรายงาน / หรือฉีกรายงานตัวเองทิ้ง |
+| `journal-reports/[id]/route.ts` | GET / DELETE | เปิดอ่านรูปเล่มรายงาน / หรือฉีกรายงานตัวเองทิ้ง — 🆕 ตอน DELETE จะ **กวาดล้างปุ่มรายงานที่ชี้มาที่ id นี้ออกจากทุกเซสชันแชทของเจ้าของคนเดียวกันด้วย** |
+
+> [!warning] 🆕 ทำไม DELETE ต้องไปยุ่งกับ `chat_sessions` ด้วย
+> ปุ่ม "เปิดรายงาน" ถูกฝังไว้ใน `messages_json` ของ `chat_sessions` (ผ่าน `reportSavePersist.ts`) ถ้าลบแถวใน `journal_reports` ทิ้งเฉย ๆ ปุ่มเก่าจะยังค้างอยู่ในแชท กดแล้ว fetch คืน 404 **เงียบ ๆ ไม่มีอะไรเกิดขึ้น ผู้ใช้งงว่าพัง** — ฟังก์ชัน `pruneDeletedReportFromSessions()` จึงไล่ scan ทุกเซสชันของ user คนนั้น (`WHERE messages_json::text LIKE '%<id>%'`) แล้วถอดปุ่มออกให้เรียบร้อยในทรานแซกชันเดียวกัน
 
 ---
 
@@ -106,6 +118,28 @@ created: 2026-07-18
 | `pdf/vault/rename/route.ts` | POST | ขอเปลี่ยนชื่อใบปะหน้าไฟล์ |
 | `pdf/vault/db-stats/route.ts` | GET | ขอดูสถิตินับจำนวน note/chunk ในฐานข้อมูล |
 | `pdf/vault/migrate-from-filesystem/route.ts` | POST | คำสั่งปาฏิหาริย์ย้ายมวลสารจาก filesystem เก่าๆ → เข้าไปสถิตใน DB |
+| 🆕 `pdf/analyze-placement/route.ts` | POST | ให้ AI เดาปลายทางที่ควรเก็บก่อนกด ingest จริง |
+| 🆕 `pdf/ingest-batch/route.ts` | POST | สั่งคิว ingest หลายไฟล์รวดเดียว |
+| 🆕 `pdf/ingest-batch/status/[batchId]/route.ts` | GET | ถามความคืบหน้าทั้งคิว + log เต็มรายไฟล์ |
+| 🆕 `pdf/ingest-batch/cancel/[batchId]/route.ts` | POST | ยกเลิกคิวที่เหลือ |
+
+---
+
+## 🆕 6.5 ห้องควบคุมค่าย AI — `app/api/llm/*` (2026-07-30)
+
+| ชื่อไฟล์ | วิธีเรียก | หน้าที่ |
+|---|---|---|
+| `llm/providers/route.ts` | GET | รายชื่อค่ายให้ผู้ใช้ทั่วไปเลือก · **ล้มแล้วคืนรายการว่าง** ไม่ให้หน้าแชทพังตาม |
+| `llm/admin/providers/route.ts` | GET / PUT | อ่าน/แก้ค่า — เฉพาะ `adminsuper` |
+| `llm/admin/providers/test/route.ts` | POST | ยิงทดสอบจริงว่าค่าที่ตั้งใช้ได้ |
+
+> [!danger] จุดที่ความปลอดภัยทั้งหมดไปกองอยู่
+> backend เชื่อ header `X-User-Role` เพราะเชื่อว่า Next.js ตรวจ session มาแล้ว
+> **ความรับผิดชอบนั้นอยู่ที่ไฟล์เหล่านี้ล้วน ๆ** — role ต้องมาจาก JWT ฝั่ง server
+> (`requireAuth()`) เท่านั้น **ห้ามรับจาก body หรือ header ที่ client ส่งมาเด็ดขาด**
+> ไม่งั้นใครก็ปลอมเป็น adminsuper ได้
+>
+> ถ้าวันหน้าเปิด backend ตรงสู่อินเทอร์เน็ต ต้องย้ายไปตรวจ JWT ที่ฝั่ง Python เอง
 
 ---
 

@@ -51,6 +51,7 @@ flowchart LR
 | [[05 - Web Search Workflow]] | 🔍 กดค้นหาเน็ตทั่วไป | `tavily` | พึ่งบริการ Tavily API |
 | [[06 - Report Generation Workflow]] | 📋 กดสร้างรายงาน | `report-gather` | ปลุกผี 5 แหล่งพร้อมกัน → โกยผลลัพธ์ลง `journal_reports` |
 | [[07 - Auth & Session Workflow]] | (ระบบล็อกอิน/จำประวัติ) | — | ฐานข้อมูล PostgreSQL ตาราง `accounts` / `chat_sessions` |
+| 🆕 [[08 - PDF Ingest Workflow]] | (หน้า `/pdf-upload`) | — | MinIO `pdf-library` → ตาราง `obsidian_notes` |
 
 ---
 
@@ -65,5 +66,6 @@ flowchart LR
 | 🔍 ค้นหาเน็ต (Web Search) | — | — | ประวัติแชท history | ควานหาจาก Tavily |
 | 📋 สร้างรายงาน (Report) | กวาดทุกแหล่งมารวมกัน + เซฟลง `journal_reports` | ดึงไฟล์รายงานมาแปะ | ประวัติแชท history | ThaiJo / PubMed / Tavily |
 | 🔐 ล็อกอิน/จำประวัติ (Auth) | ตาราง `accounts`, ตาราง `chat_sessions` | — | — | — |
+| 🆕 📄 ย่อย PDF (Ingest) | เขียน `obsidian_notes` / `obsidian_pdf_assets` | อ่าน `pdf-library` | มิเรอร์สถานะคิว (ข้าม worker) | ถาม Gemini |
 
 *ถ้าอยากดูว่าแต่ละตารางหน้าตาเป็นยังไง ไปส่องที่: [[04 - Data Architecture & Schema]] · หรือถ้าอยากดูลำดับเหตุการณ์ตามเวลา แวะไปที่: [[03 - Runtime Views]]*

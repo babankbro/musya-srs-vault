@@ -19,7 +19,13 @@ created: 2026-07-18
 ```
 chatapi.python/
 ├── main.py                     ← 🚀 จุดสตาร์ทจุดแรก: ใช้ปั้นแอป FastAPI ขึ้นมา, สั่งลงทะเบียนสายทาง 10 routers, ยึดพื้นที่เมาท์โฟลเดอร์ /static, และปล่อยหน้าทดสอบที่ /ui
-├── requirements.txt            ← 📦 รายการไลบรารี Python หลัก (มี fastapi, crewai, litellm, psycopg2, minio, redis และอื่นๆ)
+├── requirements.txt            ← 📦 รายการไลบรารี Python หลัก (มี fastapi, crewai, litellm, psycopg2, minio, redis และ 🆕 pytest)
+├── pytest.ini                  ← 🆕 ⚙️ คอนฟิกชุดทดสอบ
+├── tests/                      ← 🆕 🧪 ชุดทดสอบ pytest **43 เทสต์ ผ่านหมด** (⚠️ ไม่ถูก COPY เข้า image — Dockerfile หยิบแค่ main.py กับ src/)
+│   ├── test_obsidian_fullcontext.py  ← ตัวใหญ่สุด: anti-leak guard, streaming guard, follow-up extractor, _clean_doc_title + golden-set
+│   ├── test_analyze_report_gather.py ← การประกอบอ้างอิงของ report-gather (_obsidian_notes_to_articles_text)
+│   ├── test_question_resolver.py     ← พรอมต์ + guard ของ Memory Agent
+│   └── test_thaijo_linkify.py        ← _linkify_bare_urls (รวมบั๊กวงเล็บเหลี่ยมถูกกลืนเข้า URL)
 ├── Dockerfile                  ← 🐳 สูตรผสมเตรียมสร้างอิมเมจ (อิงพื้นฐาน python:3.12-slim)
 ├── docker-compose.yml          ← ไฟล์ compose สำหรับเปิดรันรันแบบฉายเดี่ยว Standalone (สำหรับฝั่ง Dev เอาไว้เทสเดี่ยวๆ)
 ├── AGENTS.md                   ← 📄 แผ่นพับแคตตาล็อกแนะนำตัวละครเอเจนต์ทั้งหมด (ไฟล์เอกสาร)
@@ -126,7 +132,14 @@ chatappandpython/
     ├── chat/                   ← 💬 หน้าจอห้องบัญชาการแชทหลัก
     │   ├── page.tsx · LeftPane.tsx · RightPane.tsx ← แบ่งฉากจอ ซ้าย ขวา
     │   ├── *Store.ts           ← สมุดคุมบัญชีสถานะ event stores ไม่พึ่ง redux: มีร้าน chatSession, ร้าน streaming, ฝากของ attachedFiles, จดโน้ต chatDraft, ส่องกบ thaijo, มุดฐาน databaseExplorer
-    │   ├── chatTypes.ts        ← โมเดลบอกทรงข้อมูล
+    │   ├── reportSourceStore.ts     ← 🆕 ป้ายสถานะ 5 แหล่ง (pending/running/done/error) ตอนระดมข้อมูลทำรายงาน
+    │   ├── preGatherTopicsStore.ts  ← 🆕 สะพานให้เลือก/แก้หัวข้อ "ก่อน" ยิงไประดมข้อมูลจริง (ChatInput ค้าง await รอ)
+    │   ├── reportReadyStore.ts      ← 🆕 สัญญาณ "ข้อมูลพร้อมแล้ว รอผู้ใช้กดสร้าง" (เลิก auto-generate)
+    │   ├── reportRetry.ts           ← 🆕 ปุ่มลองใหม่รายแหล่ง — ยิง report-gather-retry แล้ว append + เซฟทับลง DB
+    │   ├── wizardPersist.ts         ← 🆕 เซฟความคืบหน้า wizard แบบ debounce กันหายตอน reload กลางทาง
+    │   ├── reportSavePersist.ts     ← 🆕 เซฟ id+title ของรายงานที่ auto-save แล้ว ให้ปุ่มเปิดรายงานในแชทเก่ายังกดได้
+    │   ├── obsidianApa.ts           ← 🆕 แปลง ObsidianNoteRef → บรรณานุกรม APA (แกะประเภท/ปี/ชื่อเรื่องจากชื่อไฟล์)
+    │   ├── chatTypes.ts        ← โมเดลบอกทรงข้อมูล (🆕 เพิ่มชนิด WizardProgressSaved, SavedReportRef + ฟิลด์ wizardProgress, savedReports)
     │   ├── sessions/[sessionId]/page.tsx  ← เปิดรื้ออ่านเซสชันแชทที่ถูกบันทึกเจาะจง
     │   └── journal-template/   ← แก๊งช่วยปั้นรายงาน (มี buildJournalHtml, journalDocxStyles, journalHtmlStyles เสกหน้า export เป็น DOCX/PDF)
     ├── journal/                ← ห้องเก็บหิ้งคลังรายงานผลงานที่เซฟไว้
@@ -136,7 +149,9 @@ chatappandpython/
     ├── actions/upload.ts       ← คำสั่งรับจ้างโยนไฟล์ (server action) อัปโหลดพุ่งตรง
     ├── component/              ← องค์ประกอบจิ๊กซอว์ร่วม (components)
     │   ├── Sidebar.tsx · DatabaseExplorer.tsx
-    │   └── chat/               ← จิ๊กซอว์ฝั่งแชท: ตัวแผง ChatInput.tsx (ให้สิทธิ์จิ้มเลือกวิชา tool), จอฉาย MarkdownContent.tsx, และป้ายกระพริบไฟ AgentPipelinePanel.tsx
+    │   └── chat/               ← จิ๊กซอว์ฝั่งแชท: ตัวแผง ChatInput.tsx (ให้สิทธิ์จิ้มเลือกวิชา tool), จอฉาย MarkdownContent.tsx, ป้ายกระพริบไฟ AgentPipelinePanel.tsx
+    │       ├── ReportSourceBadges.tsx ← 🆕 แถบ badge 5 แหล่ง + ปุ่มลองใหม่บนตัวที่ error (ผูก reportSourceStore ผ่าน useSyncExternalStore)
+    │       └── ApaReferences.tsx      ← 🆕 บรรณานุกรม APA ท้ายคำตอบคลังความรู้ + ปุ่มคัดลอกทั้งชุด
     └── api/                    ← 🔌 เขตชุมสายด่านตรวจคนเข้าเมือง BFF Route Handlers (เตือน: ทุกท่อนต้องโชว์บัตร JWT ผ่านมือตม. requireAuth เสมอ)
         ├── auth/               ← ระบบออกบัตร: login, logout, register, me, users, forgot-password, reset-password
         ├── chat/               ← ★ ทางแยกสำคัญ route.ts (ตัวชิ่ง proxy ไหลตามโหมด + แยกร่างสตรีม SSE tee/เซฟหนีตาย fallback) + ทะลวงหน้า history/
