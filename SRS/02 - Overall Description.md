@@ -86,6 +86,8 @@ Router Agent (ตัวคัดแยกเส้นทาง) ← ทำกา
 | `d2` | สุขภาพจิต (Mental health) | กระบวนการ CSV Pipeline (ดึงไฟล์จาก MinIO) |
 | `d3` | โรคไม่ติดต่อเรื้อรัง (NCDs) | กระบวนการ CSV Pipeline (ดึงไฟล์จาก MinIO) |
 | `d4` | โภชนาการ (Nutrition) | กระบวนการ CSV Pipeline (ดึงไฟล์จาก MinIO) |
+| `d5` | 🆕 ประชากร (Population) | กระบวนการ CSV Pipeline — ใช้เป็นฐานประชากร (ตัวหาร) ของโดเมนอื่น |
+| `d6` | 🆕 อื่น ๆ (Other) | กระบวนการ CSV Pipeline — ที่รองรับตัวชี้วัดที่ยังไม่เข้าโดเมนใด |
 | `dt` | งานวิจัยจากศูนย์ ThaiJo (ThaiJo research) | เรียกข้อมูลผ่าน API ของระบบ ThaiJo โดยตรง |
 | `obsidian` | คลังความรู้ภายใน (Knowledge vault) | ดึงจากดัชนี pg_trgm ไฮบริดร่วมกับกระบวนการดึงเนื้อหาเต็ม (Full-context) |
 

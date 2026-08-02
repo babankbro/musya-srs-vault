@@ -18,10 +18,10 @@ created: 2026-07-18
 
 ```
 chatapi.python/
-├── main.py                     ← 🚀 จุดสตาร์ทจุดแรก: ใช้ปั้นแอป FastAPI ขึ้นมา, สั่งลงทะเบียนสายทาง 10 routers, ยึดพื้นที่เมาท์โฟลเดอร์ /static, และปล่อยหน้าทดสอบที่ /ui
+├── main.py                     ← 🚀 จุดสตาร์ทจุดแรก: ใช้ปั้นแอป FastAPI ขึ้นมา, สั่งลงทะเบียนสายทาง 13 routers, ยึดพื้นที่เมาท์โฟลเดอร์ /static, และปล่อยหน้าทดสอบที่ /ui
 ├── requirements.txt            ← 📦 รายการไลบรารี Python หลัก (มี fastapi, crewai, litellm, psycopg2, minio, redis และ 🆕 pytest)
 ├── pytest.ini                  ← 🆕 ⚙️ คอนฟิกชุดทดสอบ
-├── tests/                      ← 🆕 🧪 ชุดทดสอบ pytest **43 เทสต์ ผ่านหมด** (⚠️ ไม่ถูก COPY เข้า image — Dockerfile หยิบแค่ main.py กับ src/)
+├── tests/                      ← 🆕 🧪 ชุดทดสอบ pytest **267 เทสต์ ผ่านหมด** (2 ส.ค. 2569) (⚠️ ไม่ถูก COPY เข้า image — Dockerfile หยิบแค่ main.py กับ src/)
 │   ├── test_obsidian_fullcontext.py  ← ตัวใหญ่สุด: anti-leak guard, streaming guard, follow-up extractor, _clean_doc_title + golden-set
 │   ├── test_analyze_report_gather.py ← การประกอบอ้างอิงของ report-gather (_obsidian_notes_to_articles_text)
 │   ├── test_question_resolver.py     ← พรอมต์ + guard ของ Memory Agent
@@ -54,7 +54,10 @@ chatapi.python/
 │   └── migrate.py              ← 🔧 ตัวรันสคริปต์ migration สั่งอัปเดตสคีมา
 └── src/
     ├── config.py               ← ⚙️ กล่องดวงใจ Settings (ผ่านอิง Pydantic) ที่สั่งคอยสูบค่าจากไฟล์แอบซ่อน .env + สั่งยึด cache แบบ lru_cache
-    ├── domains.py              ← นิยามกำหนดรายชื่อหน้าตาโดเมนทั้งหลาย เช่น d0–d4, dt, หรือแก๊ง obsidian
+    ├── domains.py              ★ แหล่งความจริงเดียวของโดเมน d0–d6, dt, obsidian
+    │                             `CSV_DOMAIN_CODES` + `FOLDER_PREFIX_TO_DOMAIN` คำนวณจาก
+    │                             `folder_prefix` — เดิมเขียนรายชื่อ d2/d3/d4 ไว้ 4 ที่
+    │                             พอเพิ่มโดเมนแล้วลืมแก้ ไฟล์ก็หายจากการค้นโดยไม่มีอะไรฟ้อง
     ├── history.py              ← สมุดจดประวัติแชทระยะสั้นบน Redis (จำได้ 6 ก้าว, มีเวลาสลายตัว 24 ชม.)
     ├── db/
     │   └── pool.py             ← 🚰 แหล่งน้ำบ่อจัดการท่อ PostgreSQL ThreadedConnectionPool (กติกาคือเปิดท่อล่อต่ำสุด 2 / ลิมิตทะลุห้ามเกิน 20 เส้น)
@@ -72,7 +75,7 @@ chatapi.python/
     │   ├── llm_config.py       ← 🆕 ห้องควบคุมค่าย AI (เฉพาะ `adminsuper` · มีปุ่มยิงทดสอบจริง)
     │   ├── hdc_import.py       ← 🆕 ด่านศุลกากรนำเข้าข้อมูล HDC (preview → import → refresh · 409 กันข้อมูลหาย)
     │   └── data_dict.py        ← 🆕 ป้ายอธิบายความหมายข้างตู้ข้อมูล (404 = ไฟล์นี้ไม่มีพจนานุกรม ไม่ใช่ error)
-    ├── agents/                 ← 🤖 สมองกล AI กว่า ~23 ตัว (ถูกสร้างเป็นตี้ CrewAI crews) — แวะไปดูโฉมหน้าได้ที่ [[01 - Backend Design]]
+    ├── agents/                 ← 🤖 สมองกล AI 25 ตัว (ถูกสร้างเป็นตี้ CrewAI crews) — แวะไปดูโฉมหน้าได้ที่ [[01 - Backend Design]]
     │   ├── router.py           ← เด็กชี้เป้าจัดเส้นทางโดเมน
     │   ├── question_resolver.py← หมอความจำ Memory Agent (ผู้ช่วยขยายประโยคต่อยอด follow-up ให้เป็นเรื่องราว)
     │   ├── progress.py         ← โฆษกคอยประกาศส่ง progress event ถ่ายทอดผ่านสาย SSE
@@ -105,7 +108,9 @@ chatapi.python/
     │   ├── data_dict.py        ← 🆕 ช่างปั้นพจนานุกรมข้อมูลจากเนื้อไฟล์จริง **ไม่ใช้ LLM** (อ่านซ้ำได้ผลเดิม)
     │   ├── data_dict_lookup.py ← 🆕 คนหยิบพจนานุกรมไปแปะท้าย prompt (`describe_for_prompt()`)
     │   ├── amphoe_zone10.py    ← 🆕 ทะเบียนอำเภอเขต 10 ใช้ตรวจว่าข้อมูลที่ดึงมาอยู่ในเขตจริง
-    │   └── vault_placement.py  ← 🆕 คนชี้ว่าไฟล์ใหม่ควรลงโฟลเดอร์ไหนใน vault
+    │   └── vault_placement.py  ← 🆕 คนชี้ว่าไฟล์ใหม่ควรลงโฟลเดอร์ไหน (D1–D6)
+    │                             กฎ D5 ประชากรต้องอยู่ท้ายสุด ไม่งั้นกวาดตัวชี้วัด
+    │                             ที่มีคำว่า "ประชากร" ของโดเมนอื่นเข้ามาหมด
     ├── schemas/                ← 📋 พิมพ์เขียว Pydantic models กำหนดโครงร่างข้อมูล (มีหมวด analyze, accident_chat, accident_policy, obsidian, thaijo, pubmed, tools)
     ├── scripts/                ← 🔧 สคริปต์งานมือ 9 ตัว — รันเองเมื่อจำเป็น ไม่ได้อยู่ในเส้นทางปกติ
     │   ├── index_obsidian.py   ← สร้างดัชนี vault ใหม่ (ต้องรันหลังคัดลอกโน้ตมาเครื่องใหม่)
@@ -116,7 +121,9 @@ chatapi.python/
     │   ├── bulk_import_hdc.py  ← 🆕 นำเข้าทั้งหมวดรวดเดียว
     │   ├── match_hdc_tables.py ← 🆕 จับคู่ชื่อตารางกับรหัสรายงาน (ต้นทางไม่มี endpoint ค้นด้วยชื่อตาราง)
     │   ├── audit_hdc_subcatalog.py ← 🆕 ตรวจว่าดึงครบทั้งหมวดหรือตกหล่น
-    │   └── repair_empty_notes.py ← 🆕 ซ่อมโน้ตที่ ingest แล้วได้เนื้อว่าง
+    │   ├── repair_empty_notes.py ← 🆕 ซ่อมโน้ตที่ ingest แล้วได้เนื้อว่าง
+    │   ├── move_vault_folder.py ← 🆕 ย้าย/เปลี่ยนชื่อโฟลเดอร์ — แก้ที่อยู่ครบทั้ง 3 แหล่ง
+    │   └── clean_vault_html.py ← 🆕 ล้าง `<font color=red>` ที่หลุดเข้าไปในชื่อโฟลเดอร์
     ├── static/                 ← พื้นที่แปะหน้าโชว์ 11 หน้า HTML สำหรับเทสเดโม (จับ mount ไว้เป็น /static) + และมีโฟลเดอร์ js/ ด้วย
     └── obsidian_knowledge/     ← 🌿 บ้านเกิดเก็บ vault .md แบบของจริง (จัดแยกหมวด 5 จังหวัด + กระทรวง MOC) — แหล่งป้อน RAG source ชั้นยอด
 ```
@@ -172,7 +179,8 @@ chatappandpython/
     ├── fileapa/                ← ห้องดูแลจัดการขยะไฟล์ + จับทำบรรณานุกรม APA (+ แอบมีห้องย่อย [fileRoute]/, กับ listapa/)
     │   ├── FileMetadata.tsx    ← 🆕 แผงพจนานุกรมข้างตัวอย่างไฟล์ — เรียงข้อควรระวังขึ้นก่อน
     │   │                         เพราะเป็นสิ่งที่ทำให้ตอบผิดได้ แล้วค่อยขอบเขต → ความหมายคอลัมน์
-    │   └── HdcImportModal.tsx  ← 🆕 กล่องนำเข้า/รีเฟรชจาก HDC (จับ 409 มาแสดงเป็นตัวเลือกให้คนตัดสินใจ)
+    │   ├── HdcImportModal.tsx  ← 🆕 กล่องนำเข้า/รีเฟรชจาก HDC (จับ 409 มาแสดงเป็นตัวเลือกให้คนตัดสินใจ)
+    │   └── MoveDialog.tsx      ← 🆕 กล่องเลือกโฟลเดอร์ปลายทางตอนย้ายไฟล์/โฟลเดอร์
     ├── hdc-import/             ← 🆕 หน้าดึงทั้งหมวดรวดเดียว + ลองใหม่เฉพาะลิงก์ที่ล้ม (ต้นทางเด้ง 403 เป็นช่วง ๆ)
     ├── admin/ai-settings/      ← 🆕 หน้าตั้งค่าค่าย AI — เฉพาะสิทธิ์ `adminsuper` เท่านั้น
     ├── pdf-upload/             ← สายพานลำเลียงอัปโหลด PDF อัดยัดเข้าห้องสมุด (🆕 เลือกหลายไฟล์ · ยกเลิกได้ · Ingest Log ละเอียด)
@@ -195,6 +203,7 @@ chatappandpython/
         ├── llm/                ← 🆕 เลือกค่าย AI: providers/ (ผู้ใช้ทั่วไป) + admin/providers/{,test} (เฉพาะ adminsuper)
         ├── hdc/                ← 🆕 นำเข้าจากคลังกลาง: preview · subcatalog · import · refresh/[fileId] · imports
         ├── datadict/[fileId]/  ← 🆕 พจนานุกรมข้อมูลให้หน้า fileapa แสดง (404 = ไฟล์นี้ไม่มี ไม่ใช่ error)
+        ├── files/folder/       ← 🆕 เปลี่ยนชื่อ/ย้ายทั้งโฟลเดอร์ (แก้ prefix ของทุกไฟล์ข้างใน)
         └── thaijo-topics/      ← ควานหาหิ้งหัวข้อใหม่
 ```
 

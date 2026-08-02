@@ -83,6 +83,10 @@ sequenceDiagram
 > ที่ [`analyze.py:316`](../../chatapi.python/src/routers/analyze.py) เขียนว่า
 > `[d for d in csv_domains if d.code in ("d2","d3","d4")] or [_DOMAINS["d3"]]`
 >
+> ✅ **แก้แล้ว** — ตอนนี้เป็น `[d for d in csv_domains if d.code in _CSV_DOMAIN_CODES]`
+> โดยไม่มี fallback ต่อท้าย และ `_CSV_DOMAIN_CODES` คำนวณจาก `folder_prefix`
+> ใน `domains.py` ที่เดียว (ครอบคลุม d1–d6) ไม่ใช่รายชื่อที่เขียนไว้เอง
+>
 > เวลาผู้ใช้ถามเรื่องนอกขอบเขต (เช่น *"การควบคุมโรคพยาธิใบไม้ตับ"*) LLM router
 > **ตอบถูกแล้ว** ว่า *"เป็นหัวข้อใหม่ ไม่เกี่ยวข้องกับ domain ที่ให้มา"* แต่โค้ดกลับ
 > แปลง "ไม่รู้" ให้เป็น **d3 (NCD)** เสมอ ผลเสีย 2 ชั้น:
