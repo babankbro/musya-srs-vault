@@ -52,12 +52,13 @@ created: 2026-07-18
 - [[03 - Runtime Views]] — แผนภาพลำดับการทำงาน (Sequence diagrams) ของยูสเคสหลัก
 - [[04 - Data Architecture & Schema]] — สถาปัตยกรรมข้อมูลและสคีมาฐานข้อมูล (ERD 3 อาณาเขต, DDL จริง, การไหลข้อมูล)
 - [[05 - File Structure Tree]] — ผังโครงสร้างไฟล์ของ Frontend และ Backend + แผนที่ฟีเจอร์→ไฟล์
-- [[06 - API Reference — Backend]] — 🆕 รายละเอียด API ฝั่ง Backend รายไฟล์ (10 routers, method/request/response)
+- [[06 - API Reference — Backend]] — 🆕 รายละเอียด API ฝั่ง Backend รายไฟล์ (13 routers, method/request/response)
 - [[07 - API Reference — Frontend (BFF)]] — รายละเอียด API ฝั่ง BFF รายไฟล์ (route handlers + proxy)
 - [[08 - HDC Open Data Sync (เขต 10)]] — 🆕 ดึงสถิติจาก MoPH Open Data + HDC เข้าคลังอัตโนมัติ (API 2 ระบบ, นิยามตัวชี้วัด, กับดักข้อมูล)
 - [[09 - HDC Sync — สถานะงาน]] — 🆕 สถานะล่าสุด: เสร็จอะไร กำลังทำอะไร เหลืออะไร (อัปเดต 2026-08-01)
 - [[10 - Research Planner — ให้ Agent วางแผนค้นเอง]] — 🆕 Agent วางแผนค้นเอง เลือกเครื่องมือเอง เรียกซ้ำได้ · บังคับค้นคลังรายงานทุกครั้ง · ย่อลิงก์อ้างอิง · ปุ่มใช้ข้อมูลซ้ำ
 - [[11 - บั๊กตระกูล เติมพื้นที่ที่ผู้ใช้ไม่ได้ถาม]] — 🆕 บั๊กเดียวกันโผล่ 3 ครั้งในเซสชันเดียว (ย่อขอบเขต · ThaiJo 0→62 · PubMed 1→10) พร้อมบทเรียน
+- [[12 - Agent Concurrency — รองรับ 60-70 users]] — 🆕 ขยายเพดานการรันพร้อมกันให้รองรับผู้ใช้ 60–70 คน
 
 ## 🔧 เวิร์กโฟลว์ทีละขั้น (Workflow — Frontend → Backend → Database)
 

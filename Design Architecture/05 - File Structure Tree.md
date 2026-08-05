@@ -21,7 +21,7 @@ chatapi.python/
 ├── main.py                     ← 🚀 จุดสตาร์ทจุดแรก: ใช้ปั้นแอป FastAPI ขึ้นมา, สั่งลงทะเบียนสายทาง 13 routers, ยึดพื้นที่เมาท์โฟลเดอร์ /static, และปล่อยหน้าทดสอบที่ /ui
 ├── requirements.txt            ← 📦 รายการไลบรารี Python หลัก (มี fastapi, crewai, litellm, psycopg2, minio, redis และ 🆕 pytest)
 ├── pytest.ini                  ← 🆕 ⚙️ คอนฟิกชุดทดสอบ
-├── tests/                      ← 🆕 🧪 ชุดทดสอบ pytest **267 เทสต์ ผ่านหมด** (2 ส.ค. 2569) (⚠️ ไม่ถูก COPY เข้า image — Dockerfile หยิบแค่ main.py กับ src/)
+├── tests/                      ← 🆕 🧪 ชุดทดสอบ pytest **267 เทสต์ ผ่านหมด** · 35 ไฟล์ (2 ส.ค. 2569) (⚠️ ไม่ถูก COPY เข้า image — Dockerfile หยิบแค่ main.py กับ src/)
 │   ├── test_obsidian_fullcontext.py  ← ตัวใหญ่สุด: anti-leak guard, streaming guard, follow-up extractor, _clean_doc_title + golden-set
 │   ├── test_analyze_report_gather.py ← การประกอบอ้างอิงของ report-gather (_obsidian_notes_to_articles_text)
 │   ├── test_question_resolver.py     ← พรอมต์ + guard ของ Memory Agent
@@ -207,7 +207,7 @@ chatappandpython/
         └── thaijo-topics/      ← ควานหาหิ้งหัวข้อใหม่
 ```
 
-รวม **51 BFF route** · **17 หน้าเว็บ** (นับจริง 1 ส.ค. 2569)
+รวม **52 BFF route** · **18 หน้าเว็บ** (นับจริง 2 ส.ค. 2569)
 
 > [!note] กฎเหล็กเรื่องการตรวจสอบสิทธิ์บนพื้นที่นี้ (สำคัญมาก)
 > ทราบหรือไม่ว่าในโครงสร้างเวอร์ชันนี้ **โดนถอดไฟล์ทหารยามหน้าประตู `middleware.ts` ทิ้งไปแล้ว** — ระบบหันมาใช้วิธีป้องกันแบบประชิดตัวในแต่ละเส้นทางผ่านคำสั่ง **`requireAuth()`** แทน
