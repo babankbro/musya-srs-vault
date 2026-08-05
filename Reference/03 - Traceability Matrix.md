@@ -18,6 +18,7 @@ created: 2026-07-18
 > - `test_analyze_report_gather.py` — คุมการประกอบอ้างอิงของ report-gather (`_obsidian_notes_to_articles_text`) รวมถึงล็อกบั๊กเรื่อง path สัมพัทธ์ไม่กลายเป็นลิงก์
 > - `test_question_resolver.py` — คุมพรอมต์ + guard ของ Memory Agent
 > - `test_thaijo_linkify.py` — คุม `_linkify_bare_urls` รวมถึงบั๊กวงเล็บเหลี่ยมถูกกลืนเข้าไปใน URL
+> - 🆕 `test_research_relevance.py` — คุมด่านคัดบทความคนละเรื่อง (`parse_verdicts` / `article_brief` / `summarize_drop`) เน้นกันการ**ตัดเกิน**: คำตอบโมเดลที่ตีความไม่ได้ต้องแปลว่า "เก็บไว้" เสมอ
 >
 > **ข้อควรรู้:** เทสต์เหล่านี้ **ไม่ได้ถูก COPY เข้า Docker image** (Dockerfile หยิบแค่ `main.py` กับ `src/`) จึงรันด้วย `docker compose exec` ตรง ๆ ไม่ได้ ต้อง mount โฟลเดอร์รีโพเข้าไปในคอนเทนเนอร์ชั่วคราวแทน — ดูคำสั่งเต็มใน [[00 - Setup & Onboarding Guide]]
 >
@@ -34,6 +35,7 @@ created: 2026-07-18
 | FR-AUTH-07 | [[01 - Account & Access\|UC-03]] | [[07 - Auth & Session Workflow]] | API: `forgot/reset-password` | ⚠️ |
 | FR-AUTH-08 | [[01 - Account & Access\|UC-04]] | — | API: `auth/me` (ใช้เมธอด PATCH) | ⚠️ |
 | FR-AUTH-09 | สอดแทรกทุก UC | [[02 - Frontend Design]] | การ์ดหน้าด่าน: `requireAuth()` (ระบบนี้ไม่มี `middleware.ts`) | ✅ |
+| 🆕 FR-AUTH-10 (ป้ายเวอร์ชันโปรแกรม) | [[01 - Account & Access\|UC-04]] | [[02 - Frontend Design]] ส่วนที่ 2 | `lib/appVersion.ts` (`APP_VERSION_LABEL`) → แสดงที่ `app/account/page.tsx` หัวหน้าเพจ | ✅ (ตรวจด้วยการรันหน้าจอจริง — ป้าย `Beta V2.0` ขึ้นข้างป้ายสถานะบัญชี) |
 | FR-ADMIN-01/02/03 | [[01 - Account & Access\|UC-05]] | [[07 - Auth & Session Workflow]] | API: `auth/users` (สิทธิระดับ adminsuper) | ⚠️ |
 
 ## 2. หมวดพูดคุย & ทีมวิเคราะห์ (Chat & Analysis — `FR-CHAT-*`)
@@ -60,6 +62,10 @@ created: 2026-07-18
 | 🆕 FR-CHAT-20 (relevance gate รายไฟล์) | [[02 - Chat & Domain Analysis\|UC-08]] | [[02 - Stats Tool Agents]] ส่วน B1.5 | `csv_pipeline._verify_file_relevance` + `history.get_verified_file_ids`/`mark_file_verified` (Redis) | ⚠️ |
 | 🆕 FR-CHAT-21 (บรรณานุกรม APA ของอ้างอิงคลังความรู้) | [[02 - Chat & Domain Analysis\|UC-09]] | [[02 - Frontend Design]] ส่วนที่ 8 | `app/chat/obsidianApa.ts` (ตรรกะแกะชื่อไฟล์) + `app/component/chat/ApaReferences.tsx` (แสดงผล) + `LeftPane.tsx` | ⚠️ (ตรวจด้วยการรันจริง 10 เคสรวมเคสขอบ แต่ยังไม่มีเทสต์อัตโนมัติในรีโพ) |
 | 🆕 FR-CHAT-22 (ปุ่มคัดลอกบรรณานุกรมพร้อม URL เต็ม) | UC-09 | [[02 - Frontend Design]] ส่วนที่ 8 | `formatApa()` + `toAbsoluteUrl()` ใน `obsidianApa.ts` | ⚠️ |
+| 🆕 FR-CHAT-23 (จำนวนคนต้องเป็นจำนวนเต็ม · ร้อยละ 2 ทศนิยม) | [[02 - Chat & Domain Analysis\|UC-08]] | [[02 - Prompt Strategy & Anti-Hallucination]] ส่วนที่ 2-3 + [[02 - Frontend Design]] §5.5 | **ต้นทาง:** `prompt_profile.NUMBER_FORMAT_POLICY` + กฎปัดเลขแยกชนิดใน `csv_pipeline` / `multi_csv_pipeline` · **ปลายทาง:** `chartAdvisor.formatCell()` | ⚠️ (ตรวจด้วยการรันหน้าจอจริง — ยังไม่มีเทสต์อัตโนมัติฝั่ง frontend) |
+| 🆕 FR-CHAT-24 (แสดงสูตร LaTeX เป็นสมการจริง) | UC-08 | [[02 - Frontend Design]] §5.5 | `app/component/chat/MathContent.tsx` (parser + renderer) + บล็อก `math` ใน `MarkdownContent.parseMarkdown` | ⚠️ |
+| 🆕 FR-CHAT-25 (จัดอันดับกราฟที่เหมาะสม 1-2-3 + รองรับหลายชุดข้อมูล) | UC-08 | [[02 - Frontend Design]] §5.5 | `chartAdvisor.buildChartData()` / `rankCharts()` + `TableCharts.tsx` (SVG 4 ชนิด) | ⚠️ |
+| 🆕 FR-CHAT-26 (คัดบทความวิจัยที่คนละเรื่องออก) | UC-08 | [[04 - Research Workflow]] + [[04 - Research Tool Agents]] A0.5 | `research_relevance.filter_relevant_articles()` เรียกจาก `thaijo_agent` / `pubmed_agent` (step `relevance`) | ✅ `tests/test_research_relevance.py` (คุมตรรกะการตีความคำตอบโมเดล — ไม่ยิง LLM จริง) |
 
 ## 3. หมวดจัดทำรายงานวิชาการ (Report & Journal — `FR-REPORT-*`)
 

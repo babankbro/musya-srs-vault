@@ -48,7 +48,12 @@ created: 2026-07-18
 | `final` | สัญญาณอลังการ ผลลัพธ์สุดท้าย (ใช้เฉพาะโหมดงานช้าง research/report) | `message`, `textResult` (เนื้อหายาว), `articlesText` (ซากอ้างอิง), `articleCount`, `reportTitle`, `agentSteps`, 🆕 `docType`, 🆕 `retrySource` |
 | `error` | สัญญาณล่มปากอ่าว เกิดข้อผิดพลาดร้ายแรงขึ้นแล้ว | `message` (ข้อความฟ้อง) |
 
-> **คู่มือถอดรหัส `step`:** โค้ดขั้นตอน เช่น `memory` (เกลาความจำ), `router` (คนสับราง), `accident_sql` (วิ่งหา SQL อุบัติเหตุ), `schema` (ดูโครงสร้าง CSV), `code_gen` (เขียนโค้ด), `insight` (คนนั่งเทียนวิเคราะห์), `vault_rag` (ล้วงคลังความรู้), `obsidian_search` (คนหากระดาษโน้ต), `search`, `fetcher`, `planner`, `generator`
+> **คู่มือถอดรหัส `step`:** โค้ดขั้นตอน เช่น `memory` (เกลาความจำ), `router` (คนสับราง), `accident_sql` (วิ่งหา SQL อุบัติเหตุ), `schema` (ดูโครงสร้าง CSV), `code_gen` (เขียนโค้ด), `insight` (คนนั่งเทียนวิเคราะห์), `vault_rag` (ล้วงคลังความรู้), `obsidian_search` (คนหากระดาษโน้ต), `search`, `fetcher`, `relevance` (🆕 ยามคัดบทความคนละเรื่อง), `planner`, `generator`
+
+> 🆕 **`step: "relevance"`** — ยิงจากทั้ง `run_thaijo_pipeline` และ `run_pubmed_pipeline` ทันทีหลัง `fetcher`
+> `agent_done` ของขั้นนี้มีคีย์เพิ่ม: `articleCount` (จำนวนที่เหลือ), `droppedCount` (จำนวนที่คัดออก),
+> `reasoning` (รายชื่อบทความที่ถูกคัดพร้อมเหตุผล) · ดู [[04 - Research Tool Agents]] หัวข้อ A0.5
+> ⚠️ `articleCount` ของ `fetcher` = จำนวน**ก่อน**กรอง ส่วนของ `relevance` และ `final` = **หลัง**กรอง
 
 > **คู่มือถอดรหัส `source` (ของ `report_source_status`):** มี 5 ค่าตายตัวเท่านั้น — `obsidian` (คลังความรู้), `stats` (สถิติ), `thaijo` (งานวิจัยไทย), `pubmed` (งานวิจัยสากล), `tavily` (ค้นหาเว็บ) ส่วน `label` คือชื่อไทยสำเร็จรูปที่ backend ส่งมาให้แปะบน badge ได้เลย ไม่ต้อง map เอง
 

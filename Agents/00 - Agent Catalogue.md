@@ -38,7 +38,7 @@ created: 2026-07-18
 | ระดับ | โมเดล | ใช้ที่ไหน (ไฟล์) | temp จริง |
 |---|---|---|---|
 | **fast (ค่า default)** | `gemini-2.5-flash-lite` | `csv_pipeline`, `multi_csv`, `compare`, `database`(crew), `report`, `workplan`(crew), `router`, `tavily`, `thaijo`(crew), `error_monitor` | *ไม่ตั้ง (default)* |
-| fast + temp | `gemini-2.5-flash-lite` | Memory (`question_resolver`) 0.1 · PubMed keyword 0.0 · database doc-analyst 0.3 | ตามระบุ |
+| fast + temp | `gemini-2.5-flash-lite` | Memory (`question_resolver`) 0.1 · PubMed keyword 0.0 · database doc-analyst 0.3 · 🆕 Relevance Filter (`research_relevance`) **0.0** | ตามระบุ |
 | accident (chat) | fast / pro (`GEMINI_MODEL_PRO`) | `accident_chat_orchestrator` | fast **0.1** / pro **0.2** |
 | accident (policy) | fast / pro | `accident_policy_orchestrator` | fast **0.2** / pro **0.3** |
 | obsidian | fast / pro | `obsidian_agent` | fast 0.1 / pro 0.2 |
@@ -61,7 +61,7 @@ created: 2026-07-18
 | [[01 - Shared Agents (Memory & Router)]] | 🧭 กองกลางใช้ร่วมทุกโหมด | หมอความจำ Memory Agent, ผู้คุมคิวสับราง Router/Classifier |
 | [[02 - Stats Tool Agents]] | 📊 ปุ่มสถิติ (Stats) | ตี้สายอุบัติเหตุ (2 ตัว) · ตี้สายวิเคราะห์ CSV แผ่นเดี่ยว (6 ตัว) · ตี้สายยำรวม Multi-CSV ข้ามแผ่น (3 ตัว) |
 | [[03 - Knowledge Tool Agent]] | 🌿 ปุ่มคลังความรู้ (Vault) | ขุนคลัง Obsidian Full-Context (ยิงตรงผ่าน Gemini) |
-| [[04 - Research Tool Agents]] | 📖 ปุ่มงานวิจัย (Research) | ตี้สาย ThaiJo (Planner/Insight/Summary/Generator) · ตี้สายหมอ PubMed (Keyword/Fetcher) |
+| [[04 - Research Tool Agents]] | 📖 ปุ่มงานวิจัย (Research) | ตี้สาย ThaiJo (Planner/Insight/Summary/Generator) · ตี้สายหมอ PubMed (Keyword/Fetcher) · 🆕 ยามคัดบทความคนละเรื่อง Relevance Filter (ใช้ร่วม 2 สาย) |
 | [[05 - Web Search Tool Agents]] | 🔍 ปุ่มค้นหาเน็ตทั่วไป (Tavily) | นักส่องเน็ต Web Search Specialist · นักเรียบเรียง Research Answer Writer |
 | [[06 - Report & Policy Agents]] | 📋 ปุ่มปั้นรายงาน / เขียนนโยบาย | ตี้นักเขียนสารพัดนึก Report/Workplan/Compare/Database · ตี้นโยบายเขตสุขภาพ 10 (3 ตัว) |
 

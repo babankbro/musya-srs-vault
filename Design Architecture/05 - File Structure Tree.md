@@ -86,6 +86,8 @@ chatapi.python/
     │   ├── compare_agent.py / report_agent.py / database_agent.py / workplan_agent.py ← แก๊งตัวปั้นรายงาน
     │   ├── accident_chat_orchestrator.py / accident_policy_agent.py / accident_policy_orchestrator.py / analyst_accident.py ← แก๊งสายตรวจอุบัติเหตุ
     │   ├── thaijo_agent.py / thaijo_prompts.py / pubmed_agent.py ← แก๊งสายวิชาการ
+    │   ├── research_relevance.py ← 🆕 ยามคัดบทความ "คนละเรื่อง" ออกจากผลค้นวิจัย (ใช้ร่วม ThaiJo+PubMed)
+    │   │                           เอนไปทาง "เก็บไว้" เสมอ · ตัดหมดเกลี้ยง = ถามซ้ำแล้วเชื่อผลที่ตัดน้อยกว่า
     │   ├── obsidian_fullcontext.py / obsidian_agent.py / obsidian_progress.py ← แก๊งขุนคลัง
     │   ├── tavily_pipeline.py  ← แก๊งนักเซิร์ฟเน็ต
     │   ├── error_monitor_agent.py ← ตำรวจเฝ้าระวังข้อผิดพลาด
@@ -134,7 +136,7 @@ chatapi.python/
 
 ```
 chatappandpython/
-├── package.json                ← ทะเบียนบ้านชื่อแพ็กเกจ musyav2 + รายการช้อปปิ้ง dependencies (ใช้ next 16, react 19, หัวหอกอย่าง pg, minio, jose เป็นต้น)
+├── package.json                ← ทะเบียนบ้านชื่อแพ็กเกจ musyav2 + รายการช้อปปิ้ง dependencies (ใช้ next 16, react 19, หัวหอกอย่าง pg, minio, jose เป็นต้น) · 🆕 `version` = **2.0.0** (Beta V2.0)
 ├── tsconfig.json / next.config.ts / next-env.d.ts ← เซตอัปหลักๆ ของภาษา Type/Next
 ├── postcss.config.mjs / eslint.config.mjs ← เซตอัปช่วยเกลาโค้ดสวย
 ├── proxy.ts                    ← คนคอยหันเสาอากาศ proxy
@@ -155,7 +157,9 @@ chatappandpython/
 │   ├── minio.ts                ← ท่อเชื่อมคุยกับโกดัง client MinIO
 │   ├── apa.ts                  ← สำนักพิมพ์จัดการสร้าง APA citation ให้
 │   ├── fileApaMetadata.ts      ← คนแงะแอบสกัด metadata รื้อหาข้างในไฟล์
-│   └── fileInsights.ts         ← เซียนตาเหยี่ยวหา AI insights แอบส่องเนื้อหาไฟล์
+│   ├── fileInsights.ts         ← เซียนตาเหยี่ยวหา AI insights แอบส่องเนื้อหาไฟล์
+│   └── appVersion.ts           ← 🆕 เวอร์ชันโปรแกรมที่โชว์ให้ผู้ใช้เห็น (`APP_VERSION_LABEL` = "Beta V2.0")
+│                                 แหล่งความจริงจุดเดียว · ต้องตรงกับ `version` ใน package.json
 └── app/                        ← หัวใจวงจร App Router (สร้างการเกิดหน้าเว็บ + API routes + แก๊ง components)
     ├── layout.tsx / ClientLayout.tsx / page.tsx  ← จัดโครงกระดูกหน้า + หน้าแรกต้อนรับ
     ├── login/ · register/ · forgot-password/     ← เขตต้อนรับคนภายนอก (public)
@@ -190,7 +194,11 @@ chatappandpython/
     │   ├── Sidebar.tsx · DatabaseExplorer.tsx
     │   └── chat/               ← จิ๊กซอว์ฝั่งแชท: ตัวแผง ChatInput.tsx (ให้สิทธิ์จิ้มเลือกวิชา tool), จอฉาย MarkdownContent.tsx, ป้ายกระพริบไฟ AgentPipelinePanel.tsx
     │       ├── ReportSourceBadges.tsx ← 🆕 แถบ badge 5 แหล่ง + ปุ่มลองใหม่บนตัวที่ error (ผูก reportSourceStore ผ่าน useSyncExternalStore)
-    │       └── ApaReferences.tsx      ← 🆕 บรรณานุกรม APA ท้ายคำตอบคลังความรู้ + ปุ่มคัดลอกทั้งชุด
+    │       ├── ApaReferences.tsx      ← 🆕 บรรณานุกรม APA ท้ายคำตอบคลังความรู้ + ปุ่มคัดลอกทั้งชุด
+    │       ├── chartAdvisor.ts        ← 🆕 **ตรรกะล้วน** — อ่านทรงตาราง → ชุดข้อมูลกราฟ + จัดอันดับกราฟ 1-2-3
+    │       │                            + `formatCell()` ตัดทศนิยมของคอลัมน์ตัวนับ (ห้ามแตะร้อยละ)
+    │       ├── TableCharts.tsx        ← 🆕 กราฟ SVG 4 ชนิด (แท่งแนวตั้ง/แนวนอน · เส้น · วงกลม) รองรับหลายชุดข้อมูล
+    │       └── MathContent.tsx        ← 🆕 เรนเดอร์ LaTeX subset ($$…$$ / $…$ / \\(…\\)) ไม่พึ่ง dependency ภายนอก
     └── api/                    ← 🔌 เขตชุมสายด่านตรวจคนเข้าเมือง BFF Route Handlers (เตือน: ทุกท่อนต้องโชว์บัตร JWT ผ่านมือตม. requireAuth เสมอ)
         ├── auth/               ← ระบบออกบัตร: login, logout, register, me, users, forgot-password, reset-password
         ├── chat/               ← ★ ทางแยกสำคัญ route.ts (ตัวชิ่ง proxy ไหลตามโหมด + แยกร่างสตรีม SSE tee/เซฟหนีตาย fallback) + ทะลวงหน้า history/

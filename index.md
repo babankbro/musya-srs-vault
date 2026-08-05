@@ -15,6 +15,21 @@ created: 2026-07-18
 > คลังเอกสาร (Vault) นี้เป็น **ข้อกำหนดสเปคของซอฟต์แวร์ (Software Specification)** ที่ทำการวิเคราะห์และถอดโครงสร้างมาจากโค้ดการทำงานจริงในเวอร์ชันล่าสุด (Reverse-engineered จาก Source Code ในแฟ้ม `new_version_musya/`) ซึ่งประกอบด้วย 
 > - ส่วน Backend (API และ AI): [`chatapi.python`](https://github.com/saffyzaza/chatapi.python) (พัฒนาด้วย FastAPI + CrewAI)
 > - ส่วน Frontend (แอปพลิเคชันและ BFF): [`chatappandpython`](https://github.com/saffyzaza/chatappandpython) (`musyav2`, พัฒนาด้วย Next.js 16 + BFF)
+>
+> **เวอร์ชันโปรแกรมปัจจุบัน: `Beta V2.0`** (`package.json` = 2.0.0 · ป้ายเวอร์ชันแสดงที่หน้า `/account` ดึงจาก `lib/appVersion.ts` จุดเดียว)
+
+---
+
+## 🆕 สิ่งที่เปลี่ยนในรอบล่าสุด (Beta V2.0)
+
+| เรื่อง | ปัญหาที่ผู้ใช้เจอจริง | แก้ที่ไหน | ข้อกำหนด |
+|---|---|---|---|
+| **จำนวนคนมีทศนิยม** | *"ผู้ป่วยเบาหวานขึ้นทะเบียน 45,231.00 คน"* — เดิมสั่ง `df_display.round(2)` ทั้ง DataFrame | ต้นทาง `prompt_profile.NUMBER_FORMAT_POLICY` + `csv_pipeline`/`multi_csv_pipeline` · ปลายทาง `chartAdvisor.formatCell()` | [[03 - Functional Requirements\|FR-CHAT-23]] |
+| **สูตร LaTeX ไม่เป็นสมการ** | เห็น `$$\frac{a}{b}$$` เป็นโค้ดดิบ ทั้งที่พรอมต์สั่งให้เขียนสูตรมาตั้งแต่ต้น | `MathContent.tsx` (renderer ในตัว ไม่เพิ่ม dependency) | [[03 - Functional Requirements\|FR-CHAT-24]] |
+| **กราฟไม่มีตัวช่วยเลือก** | มีปุ่มตายตัว แท่ง/วงกลม เหมือนกันทุกตาราง · **ไม่มีกราฟเส้นเลย** · ตารางแนวโน้มแยก stage วาดได้แค่ stage เดียว | `chartAdvisor.ts` (จัดอันดับ 1-2-3) + `TableCharts.tsx` (SVG 4 ชนิด รองรับหลายชุดข้อมูล) | [[03 - Functional Requirements\|FR-CHAT-25]] |
+| **งานวิจัยคนละเรื่องปนมา** | ถาม *"มาตรการลดหวานมันเค็ม"* ได้ *"การรุกล้ำความเค็มในแม่น้ำท่าจีน"* | `research_relevance.py` (step SSE ใหม่ `relevance` · ใช้ร่วม ThaiJo+PubMed) | [[03 - Functional Requirements\|FR-CHAT-26]] |
+
+อ่านรายละเอียดที่ [[02 - Frontend Design]] §5.5 · [[04 - Research Tool Agents]] A0.5 · [[01 - SSE Event Protocol]]
 
 ---
 
@@ -100,6 +115,8 @@ created: 2026-07-18
 - [[06 - ชุดคำถามทดสอบรายเครื่องมือ 150 ข้อ]] — 🆕 ชุดเต็ม 5 เครื่องมือ × 3 โดเมน × 10 ข้อ ไว้ทดสอบทีละเครื่องมือ
 - [[07 - ผลทดสอบจริง 8 ข้อ (Baseline Run 1)]] — 🆕 ผลรันจริง 2026-08-03 · ผ่าน 3 มีปัญหา 5 · เจอปัญหา "แต่งชื่อชุดข้อมูล" และตัวเลขไม่ตรงไฟล์
 - [[04 - Backlog E1–E18 — ตรวจกับโค้ดจริง]] — 🆕 สถานะ Epic E1–E18 เทียบโค้ดจริง + งานเพิ่มเติม A1–A5 พร้อมลำดับลงมือ
+- [[11 - บั๊กตระกูล เติมพื้นที่ที่ผู้ใช้ไม่ได้ถาม]] — Memory Agent เติมชื่อจังหวัดที่ผู้ใช้ไม่ได้ถาม (3 ครั้งในเซสชันเดียว)
+- [[12 - บั๊กตระกูล การนำเสนอผลลัพธ์ (Beta V2.0)]] — 🆕 หาคำตอบถูกแต่นำเสนอผิด: ทศนิยมในจำนวนคน · LaTeX ดิบ · กราฟผิดชนิด/หายครึ่ง · งานวิจัยคนละเรื่องปนมา
 
 ---
 
